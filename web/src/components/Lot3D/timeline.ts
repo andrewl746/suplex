@@ -42,6 +42,8 @@ const DURATION = {
   grow: 0.45,
 }
 const STAGGER = { floor: 0.15, label: 0.1 }
+/** How long the camera holds still once the home labels are up, before the orbit hides them. */
+const LABEL_READ_S = 4
 const RIPPLE_DELAY_PER_M = 0.008
 /** How far a step starts before the previous one ends. */
 const OVERLAP = { outline: 0.5 }
@@ -74,7 +76,8 @@ export function buildTimeline(levels: number, homes: number, reduced: boolean): 
     floors,
     fail,
     labels,
-    orbitStart: Math.max(labels.at(-1)?.end ?? floorsEnd, fail.end),
+    // The home labels show only while the camera is still (LabelProjector), so it waits for them to be read.
+    orbitStart: Math.max(labels.at(-1)?.end ?? floorsEnd, fail.end) + (homes > 0 && !reduced ? LABEL_READ_S : 0),
     growS: d(DURATION.grow),
     delayPerM: reduced ? 0 : RIPPLE_DELAY_PER_M,
   }

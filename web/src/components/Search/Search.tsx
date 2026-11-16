@@ -108,7 +108,7 @@ export function Search({ variant }: { variant: 'hero' | 'compact' }) {
         onBlur={() => setOpen(false)}
         onKeyDown={onKeyDown}
       />
-      {/* With no options, the dropdown only says so; clicks pass through it to the example chips below. */}
+      {/* With no options, the dropdown only says so; clicks pass through it to what is below. */}
       <div ref={dropdown} className="search-dropdown" hidden={!showList} data-message-only={results.length === 0 || undefined}>
         <ul id={listId} role="listbox" className="search-list">
           {results.map((r, i) => (

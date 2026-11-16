@@ -6,7 +6,8 @@ import { useEffect, type RefObject } from 'react'
  * - the list is never taller than the room between the box and the keyboard (on a desktop, the
  *   window's bottom edge): app.css reads `--search-room` and scrolls the rest of the list;
  * - on the first screen, where the box sits part-way down the card, the card rides up while the
- *   keyboard is open (`lift`), so the box is at the top of what is left and the list has that room.
+ *   keyboard is open (`lift`), as far as its own top, so the title stays in sight and the list has
+ *   the room under the box.
  *   The page is marked `data-keyboard` meanwhile, and app.css takes the button in the top corner out
  *   of the box's way.
  */
@@ -14,8 +15,11 @@ import { useEffect, type RefObject } from 'react'
 /** Left clear between the list and the keyboard, and the least the list is ever given (px). */
 const ROOM_GAP_PX = 12
 const ROOM_MIN_PX = 96
-/** Where the box's top comes to rest when the card rides up (px from the top of what shows). */
+/** Left clear above the card, or above the box on a short screen, when the card rides up (px from
+ *  the top of what shows). */
 const LIFT_TOP_PX = 12
+/** The list's room the card rides up for: two addresses on a phone (px). */
+const ROOM_WANTED_PX = 150
 /** The page has lost at least this much height to something before it counts as a keyboard (px). */
 const KEYBOARD_MIN_PX = 120
 
@@ -47,7 +51,18 @@ export function useKeyboardRoom(
       const box = field.getBoundingClientRect()
       const riddenUp = card ? new DOMMatrixReadOnly(getComputedStyle(card).transform).m42 : 0
       const restTop = box.top - riddenUp
-      const rise = card && keyboardUp ? Math.max(0, restTop - shownTop - LIFT_TOP_PX) : 0
+      // No further than its own top reaching the top of what shows, so the title stays in sight;
+      // past that (the box itself at the top, as far as it ever goes) only on a screen so short
+      // that the list would otherwise get less than ROOM_WANTED_PX.
+      let rise = 0
+      if (card && keyboardUp) {
+        const roomAtRest = shownTop + shownHeight - (restTop + box.height) - ROOM_GAP_PX
+        const cardRestTop = card.getBoundingClientRect().top - riddenUp
+        const keepsTitle = cardRestTop - shownTop - LIFT_TOP_PX
+        const boxAtTop = restTop - shownTop - LIFT_TOP_PX
+        const needed = ROOM_WANTED_PX - roomAtRest
+        if (needed > 0) rise = Math.max(0, Math.min(boxAtTop, Math.max(keepsTitle, needed)))
+      }
       if (card) card.style.transform = rise > 0 ? `translateY(${-rise}px)` : ''
       if (app) app.toggleAttribute('data-keyboard', rise > 0)
 

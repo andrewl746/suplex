@@ -1,6 +1,4 @@
 import { disclaimers, labels } from '../../copy'
-import { EXAMPLES } from '../../examples'
-import { useApp } from '../../state/store'
 import { Search } from '../Search/Search'
 import { Blueprint } from './Blueprint'
 import { HandTitle } from './HandTitle'
@@ -19,11 +17,11 @@ function twoLines(text: string): [string, string] {
 const tagline = twoLines(labels.ui.tagline)
 
 /**
- * The first screen (MASTERSPEC 6.2): the search, the tagline, the disclaimer and two examples,
- * floating over the base map's view of Toronto. It fades away while the map flies to the address.
+ * The first screen (MASTERSPEC 6.2): the search, the tagline and the disclaimer, floating over the
+ * base map's view of Toronto. It fades away while the map flies to the address. The spec's two
+ * example addresses are left out: they are people's homes.
  */
 export function Landing({ leaving }: { leaving: boolean }) {
-  const openAddress = useApp((s) => s.openAddress)
   return (
     <section className={leaving ? 'landing landing-leaving' : 'landing'} aria-hidden={leaving || undefined}>
       <div className="landing-card">
@@ -37,19 +35,6 @@ export function Landing({ leaving }: { leaving: boolean }) {
           </p>
         </div>
         <Search variant="hero" />
-        <div className="examples">
-          <span>{labels.ui.try_examples}</span>
-          {EXAMPLES.map((e) => (
-            <button
-              key={e.address_id}
-              type="button"
-              className="chip"
-              onClick={() => openAddress(e.address_id, { fly: true })}
-            >
-              {e.address_full}
-            </button>
-          ))}
-        </div>
         <p className="disclaimer">{disclaimers.screening}</p>
       </div>
     </section>
