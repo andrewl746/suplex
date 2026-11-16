@@ -361,6 +361,17 @@
 
 /* ---------- The legend (WardLegend.tsx) and the map's hover label ---------- */
 
+/* MapLibre makes its opened attribution visible by name, which showed it through the hidden map
+   underneath the lot. */
+.ward-stage:not(.ward-stage-shown) .maplibregl-ctrl-attrib {
+  visibility: hidden;
+}
+
+/* The map's attribution sits beside the panel, not behind it. */
+.app[data-layout='side'] .ward-stage .maplibregl-ctrl-bottom-right {
+  right: var(--ward-panel-width);
+}
+
 .ward-stage .ward-legend {
   width: auto;
 }
@@ -369,6 +380,127 @@
 .ward-stage .ward-tooltip {
   outline: 1px solid var(--blueprint-edge);
   outline-offset: -1px;
+}
+
+/* ---------- Phones (layout.ts): the compact controls, and the sheet layout ---------- */
+
+/* On a phone, upright or on its side (`data-compact`), the design picker is one row that slides
+   sideways, its title kept for screen readers only, and the legend is two short rows; its line about
+   upper bounds moves into the panel (WardBrief.tsx). */
+.app[data-compact] .ward-stage .design-picker {
+  display: flex;
+  gap: var(--space-1);
+  /* A fieldset is as wide as its content unless told otherwise, and then the row never slides. */
+  min-width: 0;
+  padding: 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.app[data-compact] .ward-stage .design-picker::-webkit-scrollbar {
+  display: none;
+}
+
+.app[data-compact] .ward-stage .design-picker legend {
+  position: absolute;
+  float: none;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.app[data-compact] .design-option {
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--space-3) 0 var(--space-2);
+  white-space: nowrap;
+}
+
+.app[data-compact] .ward-stage .ward-legend {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.app[data-compact] .ward-stage .ward-legend ul {
+  grid-template-columns: auto auto;
+  gap: 2px var(--space-3);
+  margin: 0;
+}
+
+.app[data-compact] .ward-stage .ward-legend li {
+  line-height: 1.3;
+}
+
+.app[data-compact] .ward-stage .ward-legend p {
+  display: none;
+}
+
+/* The legend's line about upper bounds, in the panel instead. */
+.ward-upper-note {
+  display: none;
+}
+
+.app[data-compact] .ward-upper-note {
+  display: block;
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-xs);
+  color: var(--suplex-ink-muted);
+}
+
+/* A phone on its side: both cards keep to the screen's edge, left of the panel. */
+.app[data-compact][data-layout='side'] .ward-stage .design-picker {
+  top: var(--space-2);
+  left: calc(var(--space-2) + var(--safe-left));
+  max-width: calc(100% - var(--ward-panel-width) - 2 * var(--space-2) - var(--safe-left));
+}
+
+/* The legend leaves the corner by the panel to the map's attribution button. */
+.app[data-compact][data-layout='side'] .ward-stage .ward-legend {
+  bottom: var(--space-2);
+  left: calc(var(--space-2) + var(--safe-left));
+  max-width: calc(100% - var(--ward-panel-width) - 2 * var(--space-2) - var(--safe-left) - 44px);
+}
+
+/* A phone held upright: the panel is the sheet along the bottom (app.css). The picker runs across the
+   top, the legend sits just above the sheet, and the map's attribution stays in sight under the
+   picker, clear of both. */
+.app[data-layout='sheet'] .ward-stage .design-picker {
+  top: calc(var(--space-2) + var(--safe-top));
+  right: calc(var(--space-2) + var(--safe-right));
+  left: calc(var(--space-2) + var(--safe-left));
+  max-width: none;
+}
+
+.app[data-layout='sheet'] .ward-stage .ward-legend {
+  bottom: calc(var(--sheet-peek) + var(--space-2));
+  left: calc(var(--space-2) + var(--safe-left));
+  max-width: calc(100% - 2 * var(--space-2));
+}
+
+.app[data-layout='sheet'] .ward-stage .maplibregl-ctrl-bottom-right {
+  top: calc(var(--sheet-top) + var(--safe-top) - var(--space-2));
+  bottom: auto;
+}
+
+.app[data-layout='sheet'] .ward-brief-header {
+  margin-bottom: var(--space-4);
+}
+
+.app[data-layout='sheet'] .ward-brief-name {
+  font-size: 24px;
+}
+
+.app[data-layout='sheet'] .ward-stat-value {
+  font-size: calc(var(--text-xl) + 4px);
+}
+
+.app[data-layout='sheet'] .ward-stats {
+  gap: var(--space-3);
 }
 
 @media (prefers-reduced-motion: reduce) {

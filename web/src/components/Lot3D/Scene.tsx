@@ -5,6 +5,7 @@ import { ACESFilmicToneMapping, Color, NeutralToneMapping } from 'three'
 import type { CheckResponse, DesignId } from '@contracts/types'
 import engineConfig from '@contracts/engine_config.json'
 import { designById } from '../../designs'
+import { viewFit, type Insets } from '../../layout'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { tokenHex } from '../../styles/tokens'
 import { buildingTop } from './buildings'
@@ -98,12 +99,13 @@ export function Scene({
   check: given,
   designId,
   visible,
-  rightInsetPx,
+  insets,
 }: {
   check: CheckResponse | null
   designId: DesignId | null
   visible: boolean
-  rightInsetPx: number
+  /** What the result panel and the search bar cover: the lot is centred in the rest. */
+  insets: Insets
 }) {
   const reduced = useReducedMotion()
   // Dev only: ?stress=400 swaps in a dense synthetic street (debug.ts).
@@ -246,7 +248,8 @@ export function Scene({
             lotKey={lotKey}
             distanceM={framing.distanceM}
             viewBearingDeg={framing.viewBearingDeg}
-            rightInsetPx={rightInsetPx}
+            insets={insets}
+            maxDistanceFactor={viewFit()}
             fixed={fixedPose}
           />
           <CutawayFocus targets={targets} />
@@ -300,9 +303,9 @@ export function Scene({
               resolution={CONTACT.resolution}
             />
           )}
-          <LabelProjector labels={labels} elements={labelElements} />
+          <LabelProjector labels={labels} elements={labelElements} insets={insets} />
         </Sequence>
-        {drawn && !OFF.has('ao') && <Effects ao={rich} rightInsetPx={rightInsetPx} />}
+        {drawn && !OFF.has('ao') && <Effects ao={rich} rightInsetPx={insets.right} />}
         {SHOW_STATS && <Stats />}
       </Canvas>
       {!ELEVATION_VIEW && <SceneLabels labels={labels} elements={labelElements} />}

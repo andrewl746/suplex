@@ -10,6 +10,7 @@
 /* A chip like the landing's examples: light text on the accent, the highlight with the deep teal on
    hover. */
 .plan-switch {
+  flex: none;
   padding: var(--space-2) var(--space-4);
   border: 0;
   border-radius: 999px;
@@ -17,6 +18,7 @@
   color: var(--suplex-accent-ink);
   font-size: var(--text-sm);
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -310,4 +312,85 @@
 
 .plan-note {
   color: var(--suplex-ink-muted);
+}
+
+/* ---------- A phone held upright: the sheet layout (layout.ts) ---------- */
+
+/* The drawing fills the screen above the resting sheet, and its controls keep clear of the search bar
+   above and the sheet below. */
+.app[data-layout='sheet'] .plan-stage {
+  inset: 0 0 var(--sheet-peek) 0;
+}
+
+.app[data-layout='sheet'] .plan-north {
+  top: calc(var(--sheet-top) + var(--safe-top) + var(--space-2));
+  left: calc(var(--space-3) + var(--safe-left));
+}
+
+.app[data-layout='sheet'] .plan-attribution {
+  top: calc(var(--sheet-top) + var(--safe-top) + var(--space-1));
+  right: calc(var(--space-2) + var(--safe-right));
+  bottom: auto;
+  /* Beside the north arrow, not over it. */
+  max-width: calc(100% - 64px);
+  font-size: 10px;
+}
+
+.app[data-layout='sheet'] .plan-scalebar {
+  bottom: 64px;
+  left: calc(var(--space-3) + var(--safe-left));
+}
+
+.app[data-layout='sheet'] .plan-steps {
+  right: calc(var(--space-2) + var(--safe-right));
+  bottom: var(--space-2);
+}
+
+.app[data-layout='sheet'] .plan-zoom {
+  bottom: calc(var(--sheet-peek) + var(--space-2));
+  left: calc(var(--space-2) + var(--safe-left));
+}
+
+.app[data-layout='sheet'] .plan-zoom-button {
+  padding-inline: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* The side layout on a phone turned on its side: the zoom switch keeps clear of the panel. */
+.app[data-layout='side'] .plan-zoom {
+  left: calc(var(--space-4) + var(--safe-left));
+}
+
+/* Beside a panel on a narrower window the drawing is not wide enough for the attribution and the zoom
+   switch along the bottom, so the attribution goes up beside the north arrow. */
+@media (max-width: 999px) {
+  .app[data-layout='side'] .plan-attribution {
+    top: 84px;
+    right: var(--space-3);
+    bottom: auto;
+    max-width: calc(100% - 72px);
+    font-size: 10px;
+  }
+}
+
+/* A phone on its side: the search bar sits higher, and so do the arrow and the attribution. */
+@media (max-height: 520px) {
+  .app[data-layout='side'] .plan-north,
+  .app[data-layout='side'] .plan-attribution {
+    top: 68px;
+  }
+
+  .app[data-layout='side'] .plan-zoom {
+    bottom: var(--space-2);
+    left: calc(var(--space-2) + var(--safe-left));
+  }
+
+  .app[data-layout='side'] .plan-steps {
+    right: var(--space-2);
+    bottom: var(--space-2);
+  }
+
+  .app[data-layout='side'] .plan-scalebar {
+    bottom: 64px;
+  }
 }

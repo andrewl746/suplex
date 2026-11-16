@@ -5,17 +5,30 @@ body,
   margin: 0;
 }
 
+/* The page itself never scrolls or bounces: the map, the scene and the panels fill it, and each
+   scrolls or pans inside itself. A phone turned on its side keeps its text size. */
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--suplex-paper);
   color: var(--suplex-ink);
   font-family: var(--font-ui);
   font-size: var(--text-md);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button {
   font: inherit;
   color: inherit;
+  /* No wait for a second tap on a phone. */
+  touch-action: manipulation;
 }
 
 :focus-visible {
@@ -39,12 +52,18 @@ button {
   --graph-paper-size: 32px 32px, 32px 32px, 8px 8px, 8px 8px;
   /* The palette's muted ink, kept so a see-through box can darken its own from it (.panel). */
   --page-ink-muted: var(--suplex-ink-muted);
+  /* A phone's notch, rounded corners and home bar (index.html asks for the whole screen). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
+/* Laid out by `data-layout` and the widths and heights App.tsx sets from layout.ts: the result panel
+   down the right side of a wide screen, or a sheet along the bottom of a phone (the end of this file). */
 .app {
   position: relative;
   height: 100%;
-  min-width: 1024px;
   overflow: hidden;
 }
 
@@ -58,6 +77,9 @@ button {
 
 .basemap {
   position: absolute;
+  /* A layer of its own, so the map's attribution button (which MapLibre lifts above the map) stays
+     under the 3D scene, not over it beside a narrower panel. */
+  z-index: 0;
   inset: 0;
   /* Offline the tiles never load, and this is the landing page's background instead. */
   background: var(--suplex-paper);
@@ -106,6 +128,8 @@ button {
   backdrop-filter: blur(8px);
   box-shadow: var(--shadow);
   pointer-events: auto;
+  /* On a phone the card rides up while the keyboard is open (Search/useKeyboardRoom.ts). */
+  transition: transform 200ms ease-out;
 }
 
 .landing-leaving .landing-card {
@@ -266,18 +290,27 @@ button {
   width: min(512px, 100%);
 }
 
-/* 11 units, for the same reason. */
+/* 11 units, for the same reason; narrower where the bar has less room. */
 .search-compact {
   width: 352px;
+  min-width: 0;
 }
 
+/* iOS draws its own rounded search field and a magnifying glass unless told not to. */
 .search-input {
   box-sizing: border-box;
   width: 100%;
+  margin: 0;
   border: 1px solid var(--suplex-line-strong);
   border-radius: var(--radius);
   color: var(--suplex-ink);
   font: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-input::-webkit-search-decoration {
+  -webkit-appearance: none;
 }
 
 /* Every box you type or pick in is a ruler, like the landing's: ticks hang from the top edge only,
@@ -319,13 +352,18 @@ button {
   outline-offset: 0;
 }
 
+/* No taller than the room under the box (Search.tsx measures it, down to a phone's keyboard); a
+   longer list scrolls. */
 .search-dropdown {
   position: absolute;
   z-index: 10;
   top: calc(100% + var(--space-1));
   left: 0;
   right: 0;
-  overflow: hidden;
+  max-height: var(--search-room, none);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--blueprint-edge);
   border-radius: var(--radius-sm);
   background: var(--suplex-surface);
@@ -344,8 +382,9 @@ button {
 
 .search-option {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: 0 var(--space-3);
   padding: var(--space-3) var(--space-4);
   cursor: pointer;
 }
@@ -400,11 +439,14 @@ button {
   }
 }
 
+/* Never under the panel: on a narrower window the search box gives way. */
 .topbar {
   position: absolute;
   z-index: 2;
   top: var(--space-4);
-  left: var(--space-4);
+  left: calc(var(--space-4) + var(--safe-left));
+  box-sizing: border-box;
+  max-width: calc(100% - var(--panel-width) - 2 * var(--space-4) - var(--safe-left));
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -452,7 +494,7 @@ button {
   position: absolute;
   z-index: 2;
   top: var(--space-4);
-  right: var(--space-4);
+  right: calc(var(--space-4) + var(--safe-right));
   bottom: var(--space-4);
   box-sizing: border-box;
   width: calc(var(--panel-width) - var(--space-4));
@@ -1182,6 +1224,7 @@ a.flag-label {
 
   .landing,
   .landing-leaving,
+  .landing-card,
   .scene-visible,
   .app[data-view='toWard'] .scene {
     transition: none;
@@ -1287,6 +1330,489 @@ a.flag-label {
 @media (prefers-reduced-motion: reduce) {
   .warmup,
   .warmup-fill {
+    transition: none;
+  }
+}
+
+/* ---------- Narrow windows and phones (layout.ts) ---------- */
+
+/* What a finger has to hit is at least 44 px tall (the small "Back to your lot" chip a little less,
+   beside the ward's name). */
+@media (pointer: coarse) {
+  .chip,
+  .plan-switch,
+  .plan-zoom-button {
+    min-height: 44px;
+  }
+
+  .ward-brief-back {
+    min-height: 36px;
+  }
+
+  .search-option {
+    box-sizing: border-box;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .not-checked summary,
+  .ward-more summary {
+    padding-block: var(--space-2);
+  }
+}
+
+/* The first screen and the loading screen on a phone held upright (the same widths as layout.ts's
+   sheet layout; a media query, because the loading screen is up before the app is). The card sits
+   near the top, under "Search for Suplex", so the list of addresses has room above the keyboard; the
+   title stands over its tagline, and "Try:" over the examples. */
+@media (max-width: 600px), (max-width: 720px) and (orientation: portrait) {
+  .landing {
+    align-items: flex-start;
+    padding: calc(var(--safe-top) + 76px) var(--space-3) 0;
+  }
+
+  .warmup {
+    padding: 0 var(--space-3);
+  }
+
+  /* Inside the sheet's inner rule (28 px in), with a little to spare. */
+  .landing-card {
+    gap: var(--space-4);
+    padding: 48px 38px 46px;
+  }
+
+  .landing-head {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .landing-title {
+    font-size: clamp(56px, 20vw, 84px);
+  }
+
+  .landing-tagline {
+    font-size: var(--text-md);
+    text-align: center;
+  }
+
+  .search-hero .search-input {
+    padding: 14px var(--space-4);
+    font-size: 19px;
+  }
+
+  /* The list a step smaller than the box, so more addresses show above the keyboard. */
+  .search-hero .search-dropdown {
+    font-size: var(--text-md);
+  }
+
+  .landing-card .examples {
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+  }
+
+  .landing-card .examples > span {
+    position: static;
+    flex-basis: 100%;
+    margin: 0;
+    text-align: center;
+    transform: none;
+  }
+
+  .landing-card .chip {
+    padding-inline: var(--space-3);
+  }
+
+  .landing-card .chip + .chip {
+    margin-left: 0;
+  }
+
+  .landing-card .disclaimer,
+  .warmup-card .disclaimer {
+    text-align: center;
+  }
+}
+
+/* While the card rides up over a phone's keyboard (Search/useKeyboardRoom.ts), the button in the top
+   corner is out of the search box's way. */
+.mx-entry {
+  transition:
+    opacity 150ms ease-out,
+    visibility 0s;
+}
+
+.app[data-keyboard] .mx-entry {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 150ms ease-out,
+    visibility 0s 150ms;
+}
+
+/* A phone on its side: the card keeps its side-by-side title, with less air round it, and sits a
+   little lower, clear of "Search for Suplex" in the corner. */
+@media (max-height: 480px) and (min-width: 601px) {
+  .landing {
+    padding-top: calc(var(--safe-top) + 44px);
+  }
+
+  .landing-card {
+    gap: 10px;
+    padding-block: 34px 30px;
+  }
+
+  .landing-title {
+    font-size: 56px;
+  }
+
+  .search-hero .search-input {
+    padding-block: var(--space-3);
+  }
+}
+
+/* ----- The side layout on a narrower or shorter window ----- */
+
+/* The panel's column is under 420 px here, too narrow for two design tabs side by side. */
+@media (max-width: 999px) {
+  .app[data-layout='side'] .design-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .app[data-layout='side'] .design-tab {
+    padding-block: var(--space-2);
+  }
+
+  /* The lot's size stays on one line: smaller, with shorter dimension lines. */
+  .app[data-layout='side'] .panel-size {
+    gap: 6px;
+    font-size: var(--text-sm);
+  }
+
+  .app[data-layout='side'] .dimension {
+    gap: var(--space-1);
+  }
+
+  .app[data-layout='side'] .dimension::before,
+  .app[data-layout='side'] .dimension::after {
+    min-width: 8px;
+  }
+}
+
+/* A phone on its side (layout.ts calls it compact at the same height): the bar and the panel sit closer
+   to the edges, the design tabs go back to two a row with their names on two lines, and the footer's
+   button and screening line take less height. */
+@media (max-height: 520px) {
+  .app[data-layout='side'] .design-tabs {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .app[data-layout='side'] .design-tab {
+    gap: 6px;
+    padding: var(--space-2);
+  }
+
+  .app[data-layout='side'] .design-tab-name {
+    font-size: 14px;
+    line-height: 1.2;
+    white-space: normal;
+  }
+
+  .app[data-layout='side'] .topbar {
+    top: var(--space-2);
+    left: calc(var(--space-2) + var(--safe-left));
+    padding: var(--space-1);
+  }
+
+  .app[data-layout='side'] .brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .app[data-layout='side'] .panel {
+    top: var(--space-2);
+    bottom: var(--space-2);
+  }
+
+  .app[data-layout='side'] .panel-body {
+    padding-block: var(--space-3);
+  }
+
+  .app[data-layout='side'] .panel-footer {
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3) 0;
+  }
+
+  .app[data-layout='side'] .panel-footer .button-primary {
+    padding-block: var(--space-2);
+    font-size: var(--text-sm);
+  }
+
+  .app[data-layout='side'] .panel-footer .disclaimer {
+    font-size: 12px;
+  }
+}
+
+/* ----- The sheet layout: a phone held upright ----- */
+
+/* The search bar runs the width of the screen, over the sheet when that is open, so its list of
+   addresses is never under it. */
+.app[data-layout='sheet'] .topbar {
+  z-index: 3;
+  top: calc(var(--space-2) + var(--safe-top));
+  right: calc(var(--space-2) + var(--safe-right));
+  left: calc(var(--space-2) + var(--safe-left));
+  max-width: none;
+  gap: var(--space-2);
+  padding: 6px;
+}
+
+.app[data-layout='sheet'] .brand-mark {
+  width: 36px;
+  height: 36px;
+}
+
+/* The box takes the room between the mark and the view button. Its list hangs from the whole bar,
+   not from the box, so an address and its ward fit on a line. */
+.app[data-layout='sheet'] .search-compact {
+  position: static;
+  flex: 1;
+  width: auto;
+}
+
+.app[data-layout='sheet'] .plan-switch {
+  flex: none;
+  padding-inline: var(--space-3);
+  white-space: nowrap;
+}
+
+/* The result panel and the ward panel as a sheet (Sheet/PanelSheet.tsx): along the bottom, resting at
+   the layout's peek height and opening to just under the search bar. Solid, not see-through: the
+   blur over the 3D scene costs a phone more than it gives. The drafting frame keeps its top and
+   sides; its bottom rule runs off the screen, and the footer sits on the screen's edge. */
+.app[data-layout='sheet'] .panel {
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: var(--sheet-peek);
+  max-height: calc(100% - var(--sheet-top) - var(--safe-top));
+  padding: 20px var(--safe-right) 0 calc(20px + var(--safe-left));
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--suplex-surface);
+  backdrop-filter: none;
+  box-shadow: 0 -8px 24px rgba(28, 31, 38, 0.14);
+  transition: height 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.app[data-layout='sheet'] .panel[data-sheet='full'] {
+  height: calc(100% - var(--sheet-top) - var(--safe-top));
+}
+
+/* Under the finger the sheet follows at once. */
+.app[data-layout='sheet'] .panel[data-dragging] {
+  transition: none;
+}
+
+.app[data-layout='sheet'] .panel > .blueprint {
+  bottom: -28px;
+}
+
+/* The handle: the whole top band of the frame, with a grip at its middle that covers the ticks
+   behind it. Only the sheet has one. */
+.sheet-handle {
+  display: none;
+}
+
+.app[data-layout='sheet'] .sheet-handle {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: block;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: none;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.app[data-layout='sheet'] .sheet-handle::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 40px;
+  height: 5px;
+  margin-left: -20px;
+  border-radius: 999px;
+  background: var(--suplex-accent);
+  box-shadow: 0 0 0 5px var(--suplex-surface);
+}
+
+.app[data-layout='sheet'] .sheet-handle:focus-visible {
+  outline-offset: -3px;
+}
+
+/* The content keeps to the ruled area, with less air round it than on a wide screen. At rest it does
+   not scroll: a pull opens the sheet instead. */
+.app[data-layout='sheet'] .panel-body {
+  padding: var(--space-3) calc(20px + var(--space-3) - var(--scrollbar, 0px)) var(--space-4) var(--space-3);
+}
+
+.app[data-layout='sheet'] .panel[data-sheet='peek'] .panel-body {
+  overflow: hidden;
+}
+
+.app[data-layout='sheet'] .panel-header {
+  gap: 2px;
+}
+
+.app[data-layout='sheet'] .panel-address {
+  font-size: 24px;
+}
+
+.app[data-layout='sheet'] .panel-size {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.app[data-layout='sheet'] .panel-header + .section-rule {
+  margin-block: var(--space-3);
+}
+
+.app[data-layout='sheet'] .section-rule {
+  margin-inline: calc(-1 * var(--space-3));
+}
+
+/* The longest name ("Fourplex Narrow") still fits one line in half of a 360 px phone. */
+.app[data-layout='sheet'] .design-tabs {
+  gap: 6px;
+}
+
+.app[data-layout='sheet'] .design-tab {
+  gap: 6px;
+  padding: var(--space-2);
+}
+
+.app[data-layout='sheet'] .design-tab-name {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.app[data-layout='sheet'] .design-tab-result {
+  line-height: 1.25;
+}
+
+/* On a short phone the four tabs are one row that slides sideways, so the resting sheet still shows
+   them whole; the next tab peeks in at the edge. */
+@media (max-height: 659px) {
+  .app[data-layout='sheet'] .design-tabs {
+    grid-auto-flow: column;
+    grid-auto-columns: max(47%, 150px);
+    grid-template-columns: none;
+    margin-right: calc(-1 * var(--space-3));
+    padding-right: var(--space-3);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .app[data-layout='sheet'] .design-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app[data-layout='sheet'] .design-tab {
+    scroll-snap-align: start;
+  }
+}
+
+/* The lot's size stays on one line on a narrow phone: shorter dimension lines, closer together. */
+.app[data-layout='sheet'] .panel-size {
+  gap: 6px;
+}
+
+.app[data-layout='sheet'] .dimension {
+  gap: var(--space-1);
+}
+
+.app[data-layout='sheet'] .dimension::before,
+.app[data-layout='sheet'] .dimension::after {
+  min-width: 8px;
+}
+
+/* The footer in one row: the button, then the screening line beside it. Clear of a phone's home bar. */
+.app[data-layout='sheet'] .panel-footer {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3) calc(var(--space-2) + var(--safe-bottom));
+}
+
+.app[data-layout='sheet'] .panel-footer .button-primary {
+  width: auto;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  box-shadow: none;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.app[data-layout='sheet'] .panel-footer .disclaimer {
+  text-align: left;
+  line-height: 1.3;
+}
+
+/* The narrowest phones: beside the button the screening line would run to four or five lines, so it
+   goes under it, on one. */
+@media (max-width: 359px) {
+  .app[data-layout='sheet'] .panel-size {
+    font-size: 14px;
+  }
+
+  .app[data-layout='sheet'] .panel-footer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+
+  .app[data-layout='sheet'] .panel-footer .button-primary {
+    min-height: 40px;
+  }
+
+  .app[data-layout='sheet'] .panel-footer .disclaimer {
+    font-size: 12px;
+    text-align: center;
+  }
+}
+
+/* The data notes keep clear of the search bar and the sheet. */
+.app[data-layout='sheet'] .data-banner {
+  top: auto;
+  bottom: calc(var(--sheet-peek) + var(--space-2));
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100% - 2 * var(--space-2));
+  border-radius: var(--radius);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.app[data-layout='sheet'][data-view='landing'] .data-banner,
+.app[data-layout='sheet'][data-view='flying'] .data-banner {
+  bottom: calc(var(--space-2) + var(--safe-bottom));
+}
+
+.app[data-layout='sheet'][data-view='ward'] .data-badge {
+  bottom: calc(var(--sheet-peek) + var(--space-2));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app[data-layout='sheet'] .panel {
     transition: none;
   }
 }

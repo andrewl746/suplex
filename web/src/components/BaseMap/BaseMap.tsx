@@ -3,7 +3,7 @@ import { Map as MapLibreMap, MercatorCoordinate, setWorkerUrl, type PaddingOptio
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { CheckResponse, DesignId } from '@contracts/types'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
-import { PANEL_WIDTH_PX } from '../../layout'
+import { currentLayout, wardFitPadding } from '../../layout'
 import { useApp } from '../../state/store'
 import { cameraBridge, type BridgedPose } from '../Lot3D/cameraBridge'
 import { lotFraming } from '../Lot3D/framing'
@@ -65,14 +65,6 @@ const WARD_BASE_MS = 1200
 const BACK_FLY_MS = 1500
 /** On the way back the lots go from the ward's edge inward over this share of the flight. */
 const BACK_HIDE_SHARE = 0.7
-/** How the ward map frames its ward (WardMap/WardMapCanvas.tsx FIT_PADDING_PX, beside its panel). */
-const WARD_FIT_PADDING_PX = 40
-const WARD_PADDING: Required<PaddingOptions> = {
-  top: WARD_FIT_PADDING_PX,
-  bottom: WARD_FIT_PADDING_PX,
-  left: WARD_FIT_PADDING_PX,
-  right: PANEL_WIDTH_PX + WARD_FIT_PADDING_PX,
-}
 /** MapLibre's world is 512 px wide at zoom 0. */
 const WORLD_PX_AT_ZOOM_0 = 512
 // MapLibre looks for its worker next to its own file, which Vite moves. Hand it the worker as Vite
@@ -80,7 +72,8 @@ const WORLD_PX_AT_ZOOM_0 = 512
 setWorkerUrl(workerUrl)
 
 const NO_PADDING: PaddingOptions = { top: 0, right: 0, bottom: 0, left: 0 }
-const BESIDE_PANEL: PaddingOptions = { ...NO_PADDING, right: PANEL_WIDTH_PX }
+/** The lot sits in the part of the page the result panel and the search bar leave clear (layout.ts). */
+const clearOfPanel = (): PaddingOptions => ({ ...currentLayout().insets })
 
 /**
  * The map camera as a pose in the 3D scene's frame (metres from the lot centroid; x east, y up,
@@ -114,20 +107,21 @@ function restView(map: MapLibreMap, check: CheckResponse, designId: DesignId | n
     zoom: zoomForDistance(lat, map.getContainer().clientHeight, distanceM),
     pitch: 90 - REST_TILT_DEG,
     bearing: viewBearingDeg,
-    padding: BESIDE_PANEL,
+    padding: clearOfPanel(),
   }
 }
 
 /**
- * The view the ward map's `fitBounds` gives its ward, flat and north up, worked out the same way
- * (MapLibre's cameraForBounds on a map with no padding of its own), so this map can fly to it
- * while it still has the lot view's tilt, heading and padding.
+ * The view the ward map's `fitBounds` gives its ward (WardMap/WardMapCanvas.tsx, with the same
+ * padding from layout.ts), flat and north up, worked out the same way (MapLibre's cameraForBounds on
+ * a map with no padding of its own), so this map can fly to it while it still has the lot view's
+ * tilt, heading and padding.
  */
 function wardView(map: MapLibreMap, bounds: Bounds) {
   const { clientWidth: width, clientHeight: height } = map.getContainer()
   const sw = MercatorCoordinate.fromLngLat(bounds[0])
   const ne = MercatorCoordinate.fromLngLat(bounds[1])
-  const p = WARD_PADDING
+  const p = wardFitPadding()
   const worldPx = Math.min((width - p.left - p.right) / (ne.x - sw.x), (height - p.top - p.bottom) / (sw.y - ne.y))
   const zoom = Math.min(Math.log2(worldPx / WORLD_PX_AT_ZOOM_0), map.getMaxZoom())
   const world = WORLD_PX_AT_ZOOM_0 * 2 ** zoom

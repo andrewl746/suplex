@@ -1,8 +1,8 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { Lang, LotClass, RuleId, TrendResponse, WardResponse } from '@contracts/types'
 import reasons from '@contracts/copy/reasons.json'
 import { disclaimers, fill, formatNumber, labels } from '../../copy'
-import { Blueprint } from '../Landing/Blueprint'
+import { PanelSheet } from '../Sheet/PanelSheet'
 import { wardCopy } from '../WardMap/copy'
 import { TrendChart } from '../WardMap/TrendChart'
 import { useCountUp } from '../WardMap/useCountUp'
@@ -31,23 +31,13 @@ function splitAt(template: string, key: string, values: Record<string, string | 
   return [fill(template.slice(0, at), values).trim(), fill(template.slice(at + mark.length), values).trim()]
 }
 
-/** The result panel's drafting sheet (app.css .panel, as ResultPanel.tsx's Sheet): the content scrolls
- *  inside the ruled area, and `footer` stays under it. */
+/** The result panel's drafting sheet (Sheet/PanelSheet.tsx): the content scrolls inside the ruled area,
+ *  and `footer` stays under it. While it loads it has no handle: a phone's sheet stays at rest. */
 export function WardSheet({ label, busy = false, footer, children }: { label: string; busy?: boolean; footer?: ReactNode; children: ReactNode }) {
-  const body = useRef<HTMLDivElement>(null)
-  // The scrollbar runs down the band beside the ruled area; app.css takes its width out of the band.
-  useLayoutEffect(() => {
-    const el = body.current
-    if (el) el.style.setProperty('--scrollbar', `${el.offsetWidth - el.clientWidth}px`)
-  }, [])
   return (
-    <aside className="panel ward-brief" aria-label={label} aria-busy={busy || undefined}>
-      <Blueprint logo={false} edge />
-      <div ref={body} className="panel-body">
-        {children}
-      </div>
-      {footer}
-    </aside>
+    <PanelSheet className="ward-brief" label={label} busy={busy} footer={footer} handleLabel={busy ? undefined : label} resetKey={label}>
+      {children}
+    </PanelSheet>
   )
 }
 
@@ -151,6 +141,9 @@ export function WardBrief({ ward, lang, trend = null, near = null, onBack }: Pro
           <Stat lead={perLead} value={whole(perPermit)} caption={perCaption} />
         )}
       </section>
+
+      {/* On a phone the legend drops this line to keep the map clear, and it is read here instead. */}
+      <p className="ward-upper-note">{disclaimers.upper_bound}</p>
 
       {near && (
         <section className="ward-near-box" aria-labelledby="ward-near-heading">

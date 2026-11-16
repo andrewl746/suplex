@@ -71,22 +71,27 @@ export function PlanMap({ check, design, preset, onManual }: Props) {
       const limit = radius * PAN_LIMIT
       const cx = clamp(next.x + next.w / 2, -limit, limit)
       const cy = clamp(next.y + next.h / 2, -limit, limit)
-      setBox({ x: cx - next.w / 2, y: cy - next.h / 2, w: next.w, h: next.h })
+      const moved = { x: cx - next.w / 2, y: cy - next.h / 2, w: next.w, h: next.h }
+      // Two fingers can move twice before the next render, so the handlers' copy is kept up here too.
+      const { box: b, px: p } = live.current
+      live.current = { box: moved, px: b.w > 0 ? (p * moved.w) / b.w : p }
+      setBox(moved)
       onManual()
     },
     [radius, setBox, onManual],
   )
 
-  /** Zooms by `factor` (below 1 zooms in), keeping the point at (clientX, clientY) under the cursor. */
+  /** Zooms by `factor` (below 1 zooms in), keeping the point at (clientX, clientY) under the cursor,
+   *  after sliding the plan by (dx, dy) screen pixels. */
   const zoomAt = useCallback(
-    (clientX: number, clientY: number, factor: number) => {
+    (clientX: number, clientY: number, factor: number, dx = 0, dy = 0) => {
       const el = stage.current
       if (!el) return
       const { box: b, px: p } = live.current
       const f = clamp(factor, MIN_M_PER_PX / p, MAX_M_PER_PX / p)
       const rect = el.getBoundingClientRect()
-      const cx = b.x + b.w / 2
-      const cy = b.y + b.h / 2
+      const cx = b.x + b.w / 2 - dx * p
+      const cy = b.y + b.h / 2 - dy * p
       const wx = cx + (clientX - rect.left - rect.width / 2) * p
       const wy = cy + (clientY - rect.top - rect.height / 2) * p
       const w = b.w * f
@@ -117,23 +122,39 @@ export function PlanMap({ check, design, preset, onManual }: Props) {
     return () => el.removeEventListener('wheel', onWheel)
   }, [zoomAt])
 
-  const drag = useRef<{ x: number; y: number } | null>(null)
+  // The mouse or one finger drags the plan. Two fingers drag it by the point midway between them and
+  // zoom it about that point as they spread or pinch.
+  const held = useRef(new Map<number, { x: number; y: number }>())
   const onPointerDown = (event: PointerEvent<SVGSVGElement>) => {
-    if (event.button !== 0) return
-    drag.current = { x: event.clientX, y: event.clientY }
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    held.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
     event.currentTarget.setPointerCapture(event.pointerId)
     event.currentTarget.dataset.dragging = 'true'
   }
   const onPointerMove = (event: PointerEvent<SVGSVGElement>) => {
-    const from = drag.current
-    if (!from) return
-    const { box: b, px: p } = live.current
-    drag.current = { x: event.clientX, y: event.clientY }
-    moveTo({ ...b, x: b.x - (event.clientX - from.x) * p, y: b.y - (event.clientY - from.y) * p })
+    const points = held.current
+    if (!points.has(event.pointerId)) return
+    const before = [...points.values()]
+    points.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    const after = [...points.values()]
+    const middle = (of: { x: number; y: number }[]) => ({
+      x: of.reduce((sum, point) => sum + point.x, 0) / of.length,
+      y: of.reduce((sum, point) => sum + point.y, 0) / of.length,
+    })
+    const from = middle(before)
+    const to = middle(after)
+    if (after.length < 2) {
+      const { box: b, px: p } = live.current
+      moveTo({ ...b, x: b.x - (to.x - from.x) * p, y: b.y - (to.y - from.y) * p })
+      return
+    }
+    const spread = (of: { x: number; y: number }[]) => Math.hypot(of[0].x - of[1].x, of[0].y - of[1].y)
+    const apart = spread(after)
+    zoomAt(to.x, to.y, apart > 0 ? spread(before) / apart : 1, to.x - from.x, to.y - from.y)
   }
   const endDrag = (event: PointerEvent<SVGSVGElement>) => {
-    drag.current = null
-    delete event.currentTarget.dataset.dragging
+    held.current.delete(event.pointerId)
+    if (held.current.size === 0) delete event.currentTarget.dataset.dragging
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
