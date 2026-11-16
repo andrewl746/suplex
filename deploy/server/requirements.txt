@@ -1,0 +1,19 @@
+# What the live server runs on, pinned to the versions the tests pass with (the shared .venv, 2026-11-15).
+# serve.py relies on Starlette 1.x putting a mounted prefix in root_path, so starlette is pinned too.
+fastapi==0.143.3
+starlette==1.8.0
+uvicorn[standard]==0.54.0
+# API
+geopandas==1.2.0
+pyogrio==0.13.0
+shapely==2.2.0
+pyproj==3.8.0
+pyarrow==26.0.0
+numpy==2.5.4
+pandas==3.0.6
+psycopg[binary]==3.3.6
+# AI service
+google-genai==2.31.0
+httpx==0.28.1
+jsonschema==4.26.0
+pydantic==2.14.1

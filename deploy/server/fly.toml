@@ -1,0 +1,45 @@
+# Fly.io settings for the live site. deploy/publish.py fills in the app name.
+app = "APP_NAME"
+primary_region = "yyz"  # Toronto
+
+[env]
+  SUPLEX_DATA_DIR = "/data"
+  # The month's limits (serve.py, Budget). Fly has no spending limit of its own. Past either one the site
+  # shows a "paused" page until the 1st. Data sent costs $0.02 a GB, an hour awake about $0.037 (2026-11).
+  SUPLEX_MONTHLY_GB = "20"            # about $0.40
+  SUPLEX_MONTHLY_AWAKE_HOURS = "60"   # about $2.20
+
+# The city data (deploy/publish.py --data puts it here). It stays off GitHub: no download of lots.
+[mounts]
+  source = "suplex_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Sleep when nobody is visiting and wake on the next request, so the 4 GB of memory is paid for only
+  # while someone is using the site. The web app shows a loading screen while the data loads.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  # At most 100 requests at once, so a flood of bots can't run the server out of memory.
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
+  # /warmup answers before the data is loaded, so a machine that has just woken is healthy at once.
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/warmup"
+    timeout = "5s"
+
+# The whole city in memory is about 1.6 GB, with a 2.3 GB peak while it loads. Four shared CPUs, not two,
+# for the disk: Fly lets this size read 32 MiB a second, twice the smaller one, and reading is most of the
+# wait when the server wakes. It costs about 5% more for each hour awake.
+[[vm]]
+  size = "shared-cpu-4x"
+  memory = "4gb"

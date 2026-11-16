@@ -19,3 +19,7 @@ web/public/demo-cache/
 !contracts/fixtures/**
 !pipeline/data/*.geojson
 *.egg-info/
+
+# deploy/publish.py: the staged server and the zipped data
+deploy/build/
+deploy/data-zip/
