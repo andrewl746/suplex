@@ -1199,3 +1199,94 @@ a.flag-label {
     animation: none;
   }
 }
+
+/* ---------- Loading screen for the live site (components/Warmup) ---------- */
+
+/* Over everything, on the page's lime with the drafting sheet's graph paper, while the server wakes
+   and loads the city. It fades like the landing card, which is what it gives way to. */
+.warmup {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-6);
+  background-color: var(--suplex-paper);
+  background-image: var(--graph-paper);
+  background-size: var(--graph-paper-size);
+  transition: opacity 300ms ease-out;
+}
+
+.warmup-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The landing card, solid: there is no map behind this one to show through. */
+.warmup-card {
+  background: var(--suplex-surface);
+  backdrop-filter: none;
+}
+
+.warmup-card .disclaimer {
+  color: var(--suplex-ink);
+  font-size: calc(var(--text-sm) - 1px);
+  text-align: center;
+}
+
+/* As wide as the landing card's search box (.search-hero), which takes this place once it has loaded. */
+.warmup-progress {
+  width: min(512px, 100%);
+}
+
+.warmup-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.warmup-percent {
+  color: var(--suplex-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A scale bar off the sheet: ruled in the drafting teal, filled in the accent. */
+.warmup-bar {
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid var(--blueprint-rule);
+  border-radius: 999px;
+  background: var(--suplex-surface);
+}
+
+/* Each answer from the server is a little further on; a linear move between two answers reads as one
+   steady advance. */
+.warmup-fill {
+  height: 100%;
+  background: var(--suplex-accent);
+  transform: scaleX(var(--warmup-shown, 0));
+  transform-origin: left;
+  transition: transform 450ms linear;
+}
+
+.warmup-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+
+.warmup-failed p {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .warmup,
+  .warmup-fill {
+    transition: none;
+  }
+}

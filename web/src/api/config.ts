@@ -26,3 +26,10 @@ export const EXPLAIN_TIMEOUT_MS = 20000
 
 /** GET /search returns at most this many results (MASTERSPEC 3.3). */
 export const SEARCH_LIMIT = 8
+
+/**
+ * The live server sleeps when nobody is visiting, and says how far its start-up is at this address
+ * (deploy/server/serve.py). The app then waits behind a loading screen (components/Warmup). `null`,
+ * the default, is a server that is simply up or down: no loading screen.
+ */
+export const WARMUP_URL: string | null = import.meta.env.VITE_WARMUP_URL || null
