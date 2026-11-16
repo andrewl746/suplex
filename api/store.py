@@ -12,6 +12,7 @@ import logging
 import math
 import re
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,10 @@ log = logging.getLogger("uvicorn.error")
 REQUIRED_LAYERS = ("lots", "corridors", "addresses", "buildings", "wards")
 OPTIONAL_LAYERS = ("trees",)
 COUNTED_LAYERS = ("lots", "buildings", "addresses", "corridors", "trees")
+STEP_INDEX = "index"   # the last step `load()` reports to `on_step`, after every layer's name
+# <data_dir>/layers/<layer>.parquet: the GeoPackage's layers as compressed GeoParquet, a third of its size.
+# The live server reads these, because its disk is slow and its wait is the reading (`write_layers`).
+LAYERS_DIR = "layers"
 
 # Fetch radii, not decisions (the engine applies its own thresholds from engine_config.json to what it gets):
 CORRIDOR_FETCH_M = 5.0     # MASTERSPEC 5.1: corridors within 5 m of the lot feed the street-edge test
@@ -409,29 +414,71 @@ def check_crs(gpkg: Path, frames: dict[str, gpd.GeoDataFrame]) -> None:
                              f"not {EPSG_METRES}")
 
 
+def read_layer(gpkg: Path, name: str, bbox: tuple[float, float, float, float] | None = None) -> gpd.GeoDataFrame:
+    """One layer of the GeoPackage; with `bbox`, only the features that intersect it (the wards always whole)."""
+    return gpd.read_file(gpkg, layer=name, engine="pyogrio", use_arrow=True, bbox=None if name == "wards" else bbox)
+
+
+def write_layers(gpkg: str | Path, layers_dir: str | Path,
+                 bbox: tuple[float, float, float, float] | None = None) -> list[Path]:
+    """Write every layer `load()` reads as `<layers_dir>/<layer>.parquet`, for a data folder without the
+    GeoPackage (deploy/publish.py sends these to the live server). GeoParquet keeps each column's type and the
+    geometry bit for bit, so a store loaded from them is the same store; the tests check that."""
+    gpkg, layers_dir = Path(gpkg), Path(layers_dir)
+    layers_dir.mkdir(parents=True, exist_ok=True)
+    present = {str(name) for name, _ in pyogrio.list_layers(gpkg)}
+    written = []
+    for name in REQUIRED_LAYERS + OPTIONAL_LAYERS:
+        if name in present:
+            path = layers_dir / f"{name}.parquet"
+            read_layer(gpkg, name, bbox).to_parquet(path, compression="zstd", compression_level=9, index=False)
+            written.append(path)
+    return written
+
+
 def load(data_dir: str | Path, gpkg_path: str | Path | None = None,
-         bbox: tuple[float, float, float, float] | None = None) -> Store:
+         bbox: tuple[float, float, float, float] | None = None,
+         on_step: Callable[[str], None] | None = None) -> Store:
     """Read the GeoPackage and the small JSON files in `data_dir` and build every index.
 
-    `gpkg_path` overrides `<data_dir>/suplex.gpkg` (SUPLEX_GPKG). `bbox` (EPSG:2952 minx, miny, maxx, maxy)
-    reads only the features of each layer that intersect it, wards excepted; the batch run loads one strip of a
-    ward this way. Raises StoreError naming the missing file or layer when the GeoPackage cannot be used; the
-    other files are optional."""
+    `gpkg_path` overrides `<data_dir>/suplex.gpkg` (SUPLEX_GPKG). Where there is no GeoPackage, the layers are
+    read from `<data_dir>/layers/` instead, if `write_layers` put them there: the same rows, faster to read.
+    `bbox` (EPSG:2952 minx, miny, maxx, maxy) reads only the features of each layer that intersect it, wards
+    excepted; the batch run loads one strip of a ward this way, and it needs the GeoPackage. `on_step` is
+    called with a layer's name as its read starts, then with "index" as the indexes are built; the live server
+    reports these as its loading progress. Raises StoreError naming the missing file or layer when the layers
+    cannot be read; the other files are optional."""
     t0 = time.perf_counter()
     data_dir = Path(data_dir)
     gpkg = Path(gpkg_path) if gpkg_path else data_dir / "suplex.gpkg"
-    if not gpkg.is_file():
+    layers_dir = data_dir / LAYERS_DIR
+    from_layers = gpkg_path is None and bbox is None and not gpkg.is_file() and layers_dir.is_dir()
+    if from_layers:
+        source = layers_dir
+        present = {path.stem for path in layers_dir.glob("*.parquet")}
+    elif gpkg.is_file():
+        source = gpkg
+        present = {str(name) for name, _ in pyogrio.list_layers(gpkg)}
+    else:
         raise StoreError(f"GeoPackage not found: {gpkg} (set SUPLEX_DATA_DIR to the folder with suplex.gpkg, "
                          "or SUPLEX_GPKG to the file)")
-    present = {str(name) for name, _ in pyogrio.list_layers(gpkg)}
     missing = [name for name in REQUIRED_LAYERS if name not in present]
     if missing:
-        raise StoreError(f"{gpkg} has no layer {', '.join(missing)}")
+        raise StoreError(f"{source} has no layer {', '.join(missing)}")
 
-    frames = {name: gpd.read_file(gpkg, layer=name, engine="pyogrio", use_arrow=True,
-                                  bbox=None if name == "wards" else bbox)
-              for name in REQUIRED_LAYERS + OPTIONAL_LAYERS if name in present}
-    check_crs(gpkg, frames)
+    frames: dict[str, gpd.GeoDataFrame] = {}
+    for name in REQUIRED_LAYERS + OPTIONAL_LAYERS:
+        if name not in present:
+            continue
+        if on_step:
+            on_step(name)
+        if from_layers:
+            frames[name] = gpd.read_parquet(layers_dir / f"{name}.parquet")
+        else:
+            frames[name] = read_layer(gpkg, name, bbox)
+    check_crs(source, frames)
+    if on_step:
+        on_step(STEP_INDEX)
     cfg = load_config()
     raw_dates = _read_json(data_dir / "data_dates.json")
     if not isinstance(raw_dates, dict):
@@ -442,7 +489,7 @@ def load(data_dir: str | Path, gpkg_path: str | Path | None = None,
         log.warning("suplex: %s has no wards object; /ward/{id} answers 503", data_dir / "ward_summary.json")
         ward_summary = None
     store = Store(
-        data_dir=data_dir, gpkg_path=gpkg, frames=frames,
+        data_dir=data_dir, gpkg_path=source, frames=frames,
         permit_points=read_permit_points(data_dir / "permits.geojson", cfg.permits_since),
         cfg=cfg, designs=load_designs(), designs_json=read_designs_json(),
         data_dates=normalise_data_dates(raw_dates), ward_summary=ward_summary,

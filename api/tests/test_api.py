@@ -250,3 +250,59 @@ def test_static_serves_nothing_else(client, store) -> None:
         r = client.get(path)
         assert r.status_code == 404, path
         assert r.json() == {"error": "not_found"}, path
+
+
+def test_load_names_each_layer_then_the_index(store) -> None:
+    """`on_step` gets every layer as its read starts and ends with the index step: the live server's progress."""
+    from api.store import OPTIONAL_LAYERS, REQUIRED_LAYERS, STEP_INDEX, load
+
+    steps: list[str] = []
+    one_lot = tuple(float(v) for v in shapely.bounds(store.lot_geoms[0]))
+    load(store.data_dir, store.gpkg_path, bbox=one_lot, on_step=steps.append)
+    assert steps[:len(REQUIRED_LAYERS)] == list(REQUIRED_LAYERS)
+    assert steps[-1] == STEP_INDEX
+    assert set(steps[len(REQUIRED_LAYERS):-1]) <= set(OPTIONAL_LAYERS)
+
+
+def _same(a: Any, b: Any) -> bool:
+    """Two of a store's arrays hold the same values of the same types (geometry compared byte for byte)."""
+    if a.dtype != b.dtype or a.shape != b.shape:
+        return False
+    if a.dtype == object and len(a) and isinstance(a.flat[0], shapely.Geometry):
+        return shapely.to_wkb(a).tolist() == shapely.to_wkb(b).tolist()
+    if a.dtype == object or a.dtype.kind in "UT":
+        return [f"{type(v).__name__}:{v}" for v in a.tolist()] == [f"{type(v).__name__}:{v}" for v in b.tolist()]
+    return a.tobytes() == b.tobytes()
+
+
+def test_a_store_read_from_the_parquet_layers_is_the_same_store(store, tmp_path) -> None:
+    """The live server has no GeoPackage: it reads <data_dir>/layers/*.parquet, which `write_layers` makes."""
+    import numpy as np
+
+    from api.store import LAYERS_DIR, load, write_layers
+
+    x0, y0, x1, y1 = (float(v) for v in shapely.bounds(store.lot_geoms[0]))
+    block = (x0 - 150, y0 - 150, x1 + 150, y1 + 150)
+    written = write_layers(store.gpkg_path, tmp_path / LAYERS_DIR, bbox=block)
+    assert {path.stem for path in written} >= {"lots", "corridors", "addresses", "buildings", "wards"}
+    for name in ("data_dates.json", "ward_summary.json", "permits.geojson"):
+        if (store.data_dir / name).is_file():
+            (tmp_path / name).write_bytes((store.data_dir / name).read_bytes())
+
+    from_gpkg = load(store.data_dir, store.gpkg_path, bbox=block)
+    from_layers = load(tmp_path)
+    assert from_layers.gpkg_path == tmp_path / LAYERS_DIR
+    assert from_layers.layer_counts == from_gpkg.layer_counts and from_gpkg.lot_count > 1
+    arrays = {name: value for name, value in vars(from_gpkg).items() if isinstance(value, np.ndarray)}
+    assert len(arrays) > 15
+    for name, value in arrays.items():
+        assert _same(value, getattr(from_layers, name)), name
+    for column, value in from_gpkg.lot_cols.items():
+        assert _same(value, from_layers.lot_cols[column]), column
+
+
+def test_a_folder_with_neither_the_geopackage_nor_the_layers_cannot_start(tmp_path) -> None:
+    from api.store import StoreError, load
+
+    with pytest.raises(StoreError, match="GeoPackage not found"):
+        load(tmp_path)
