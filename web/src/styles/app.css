@@ -220,16 +220,6 @@ button {
   text-align: right;
 }
 
-.examples {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--suplex-ink-muted);
-}
-
 /* Light text on the accent (about 6.6:1); the hover swaps to the highlight with the deep teal
    (about 6.5:1; the accent itself is only 4.3:1 there). */
 .chip {
@@ -248,30 +238,8 @@ button {
 }
 
 /* The see-through card drops the muted ink under 4.5:1 over the darkest map; full ink keeps it. */
-.landing-card .examples,
 .landing-card .disclaimer {
   color: var(--suplex-ink);
-}
-
-/* The examples spread wider under the search, a step up in size. */
-.landing-card .examples {
-  position: relative;
-  gap: var(--space-4);
-  font-size: var(--text-md);
-}
-
-/* "Try:" hangs off to the left, out of the row, so the two examples centre on their own. */
-.landing-card .examples > span {
-  position: absolute;
-  top: 50%;
-  right: 100%;
-  margin-right: var(--space-4);
-  transform: translateY(-50%);
-}
-
-/* The two examples stand further apart than "Try:" does from the first. */
-.landing-card .chip + .chip {
-  margin-left: var(--space-4);
 }
 
 /* A step smaller than elsewhere, so the disclaimer sits back from the search. */
@@ -1364,7 +1332,7 @@ a.flag-label {
 /* The first screen and the loading screen on a phone held upright (the same widths as layout.ts's
    sheet layout; a media query, because the loading screen is up before the app is). The card sits
    near the top, under "Search for Suplex", so the list of addresses has room above the keyboard; the
-   title stands over its tagline, and "Try:" over the examples. */
+   title stands over its tagline. */
 @media (max-width: 600px), (max-width: 720px) and (orientation: portrait) {
   .landing {
     align-items: flex-start;
@@ -1404,27 +1372,6 @@ a.flag-label {
   /* The list a step smaller than the box, so more addresses show above the keyboard. */
   .search-hero .search-dropdown {
     font-size: var(--text-md);
-  }
-
-  .landing-card .examples {
-    gap: var(--space-2);
-    font-size: var(--text-sm);
-  }
-
-  .landing-card .examples > span {
-    position: static;
-    flex-basis: 100%;
-    margin: 0;
-    text-align: center;
-    transform: none;
-  }
-
-  .landing-card .chip {
-    padding-inline: var(--space-3);
-  }
-
-  .landing-card .chip + .chip {
-    margin-left: 0;
   }
 
   .landing-card .disclaimer,

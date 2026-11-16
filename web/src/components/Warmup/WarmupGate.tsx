@@ -182,7 +182,6 @@ function WarmupScreen({ view }: { view: View }) {
             </div>
           </div>
         )}
-        {view.failed !== PAUSED && <p className="disclaimer">{labels.warmup.note}</p>}
       </div>
     </section>
   )
