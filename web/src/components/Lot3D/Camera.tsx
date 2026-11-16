@@ -122,7 +122,9 @@ export function Camera({
     }
     if (ctl && !ctl.enabled) ctl.enabled = true
     const idle = !user.current.dragging && frame.clock.elapsedTime - user.current.releasedAt >= ORBIT_IDLE_S
-    if (reduced || t < timeline.orbitStart || !idle) return
+    // Not on a frame drawn while the scene is hidden (one is, as it hides): its time step is the
+    // frame's timestamp in milliseconds, which turned the camera to an arbitrary side of the lot.
+    if (reduced || t < timeline.orbitStart || !idle || frame.frameloop === 'never') return
     offset.copy(cam.position).sub(TARGET).applyAxisAngle(UP, ((2 * Math.PI) / ORBIT_PERIOD_S) * delta)
     cam.position.copy(TARGET).add(offset)
     cam.lookAt(TARGET)
