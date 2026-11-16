@@ -1,14 +1,17 @@
-import { useEffect, useId, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import type { SearchResult } from '@contracts/types'
 import { search } from '../../api/client'
 import { isAbort } from '../../api/errors'
 import { labels } from '../../copy'
 import { useApp } from '../../state/store'
 import { streetPart } from './streetPart'
+import { useKeyboardRoom } from './useKeyboardRoom'
 
 // Address autocomplete (MASTERSPEC 6.2, J2): a WAI-ARIA combobox over GET /search.
 const DEBOUNCE_MS = 150
 const MIN_CHARS = 2
+/** A phone or a tablet: picking an address puts the keyboard away, so the lot is not hidden behind it. */
+const TOUCH_QUERY = '(pointer: coarse)'
 
 type Lookup =
   | { state: 'idle' }
@@ -22,6 +25,10 @@ export function Search({ variant }: { variant: 'hero' | 'compact' }) {
   const [active, setActive] = useState(-1)
   const [open, setOpen] = useState(false)
   const listId = useId()
+  const input = useRef<HTMLInputElement>(null)
+  const dropdown = useRef<HTMLDivElement>(null)
+  // The list keeps to the room above a phone's keyboard; the landing card rides up to make some.
+  useKeyboardRoom(input, dropdown, variant === 'hero')
 
   const q = streetPart(query)
   const tooShort = q.length < MIN_CHARS
@@ -55,6 +62,7 @@ export function Search({ variant }: { variant: 'hero' | 'compact' }) {
     if (!result) return
     setQuery(result.address_full)
     setOpen(false)
+    if (window.matchMedia(TOUCH_QUERY).matches) input.current?.blur()
     openAddress(result.address_id, { fly: true })
   }
 
@@ -78,8 +86,10 @@ export function Search({ variant }: { variant: 'hero' | 'compact' }) {
   return (
     <div className={`search search-${variant}`}>
       <input
+        ref={input}
         className="search-input"
         type="search"
+        enterKeyHint="search"
         role="combobox"
         aria-label={labels.ui.search_placeholder}
         aria-expanded={showList}
@@ -99,7 +109,7 @@ export function Search({ variant }: { variant: 'hero' | 'compact' }) {
         onKeyDown={onKeyDown}
       />
       {/* With no options, the dropdown only says so; clicks pass through it to the example chips below. */}
-      <div className="search-dropdown" hidden={!showList} data-message-only={results.length === 0 || undefined}>
+      <div ref={dropdown} className="search-dropdown" hidden={!showList} data-message-only={results.length === 0 || undefined}>
         <ul id={listId} role="listbox" className="search-list">
           {results.map((r, i) => (
             <li

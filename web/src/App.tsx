@@ -10,7 +10,7 @@ import { Search } from './components/Search/Search'
 import { MultiplexSearchEntry } from './components/WardMap/MultiplexSearchEntry'
 import { WardStage } from './components/WardStage/WardStage'
 import { labels } from './copy'
-import { PANEL_WIDTH_PX } from './layout'
+import { useLayout } from './layout'
 import { useApp } from './state/store'
 import { useUrlSync } from './state/useUrlSync'
 
@@ -22,13 +22,26 @@ export default function App() {
   const designId = useApp((s) => s.designId)
   const graphics = useApp((s) => s.graphics)
   const graphicsFailed = useApp((s) => s.graphicsFailed)
+  const layout = useLayout()
   const inLot = view === 'lot'
   // The street is built as the check comes back (before the flight starts) and shown from the
   // handoff, over the flight's last stretch.
   // The plan and ward views keep the street built behind them, so the way back to the 3D lot is instant.
   const sceneCheck = view === 'landing' ? null : check
   return (
-    <main className="app" data-view={view} style={{ '--panel-width': `${PANEL_WIDTH_PX}px` } as CSSProperties}>
+    <main
+      className="app"
+      data-view={view}
+      data-layout={layout.mode}
+      data-compact={layout.compact || undefined}
+      style={
+        {
+          '--panel-width': `${layout.panelWidthPx}px`,
+          '--sheet-peek': `${layout.sheetPeekPx}px`,
+          '--sheet-top': `${layout.sheetTopPx}px`,
+        } as CSSProperties
+      }
+    >
       {graphics && (
         <GraphicsBoundary onError={graphicsFailed}>
           <BaseMap />
@@ -37,7 +50,7 @@ export default function App() {
             check={sceneCheck}
             designId={designId}
             visible={(inLot || handoff) && sceneCheck !== null}
-            rightInsetPx={PANEL_WIDTH_PX}
+            insets={layout.insets}
           />
         </GraphicsBoundary>
       )}

@@ -511,6 +511,12 @@
     visibility: hidden;
     pointer-events: none;
   }
+
+  /* MapLibre makes its opened attribution visible by name, so it showed over the list, across the
+     screening line at the bottom. */
+  .mxb[data-pane='list'] .mxb-map .maplibregl-ctrl-attrib {
+    visibility: hidden;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

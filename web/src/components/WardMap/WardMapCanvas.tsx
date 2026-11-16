@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Feature, Polygon } from 'geojson'
 import { Map as MapLibreMap, type MapGeoJSONFeature, type MapMouseEvent } from 'maplibre-gl'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
-import { PANEL_WIDTH_PX } from '../../layout'
+import { wardFitPadding } from '../../layout'
 import { applyData, applyDesign, applyNearRing, applySearched, addLayers, blankStyle, neutraliseBase } from './layers'
 import type { DesignFilter } from './designs'
 import type { LotProps, WardData } from './data'
@@ -17,7 +17,6 @@ const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 const STYLE_TIMEOUT_MS = 3500
 const MIN_ZOOM = 11
 const MAX_ZOOM = 18
-const FIT_PADDING_PX = 40
 const PULSE_PERIOD_MS = 2000
 const PULSE_MIN = 0.35
 
@@ -83,7 +82,7 @@ export function WardMapCanvas({ data, filter, searchedLotId, onSelectLot, ariaLa
       neutraliseBase(map)
       addLayers(map, d, f, s)
       applyNearRing(map, ring)
-      map.fitBounds(d.bounds, { padding: { top: FIT_PADDING_PX, left: FIT_PADDING_PX, bottom: FIT_PADDING_PX, right: PANEL_WIDTH_PX + FIT_PADDING_PX }, duration: 0 })
+      map.fitBounds(d.bounds, { padding: wardFitPadding(), duration: 0 })
       setReady(true)
     })
 
@@ -100,7 +99,10 @@ export function WardMapCanvas({ data, filter, searchedLotId, onSelectLot, ariaLa
     })
     map.on('click', 'lots-fill', (e) => {
       const feature = lotAt(e)
-      if (feature) live.current.onSelectLot(String((feature.properties as { id: number }).id))
+      if (!feature) return
+      // A tap leaves no mouseleave behind it, so the label would still be here on the way back.
+      setTip(null)
+      live.current.onSelectLot(String((feature.properties as { id: number }).id))
     })
 
     mapRef.current = map
@@ -119,7 +121,7 @@ export function WardMapCanvas({ data, filter, searchedLotId, onSelectLot, ariaLa
     if (!map || !ready || shownWard.current === data.ward.ward_id) return
     shownWard.current = data.ward.ward_id
     applyData(map, data)
-    map.fitBounds(data.bounds, { padding: { top: FIT_PADDING_PX, left: FIT_PADDING_PX, bottom: FIT_PADDING_PX, right: PANEL_WIDTH_PX + FIT_PADDING_PX }, duration: 0 })
+    map.fitBounds(data.bounds, { padding: wardFitPadding(), duration: 0 })
   }, [data, ready])
 
   useEffect(() => {

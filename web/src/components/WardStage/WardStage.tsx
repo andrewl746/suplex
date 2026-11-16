@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { fill, formatNumber, labels } from '../../copy'
-import { PANEL_WIDTH_PX } from '../../layout'
+import { useLayout } from '../../layout'
 import { useApp } from '../../state/store'
 import { wardCopy } from '../WardMap/copy'
 import { isDisabled, type DesignFilter } from '../WardMap/designs'
@@ -50,6 +50,7 @@ export function WardStage() {
   const openLot = useApp((s) => s.openLot)
   const backToLot = useApp((s) => s.backToLot)
   const [filter, setFilter] = useState<DesignFilter>('all')
+  const layout = useLayout()
   const data = wardData?.ward.ward_id === wardId ? wardData : null
   // Yuvi's near-your-lot circle and box, only for a check in this ward.
   const { nearRing, near } = useNearYourLot(check?.lot.ward_id === wardId ? check : null, data)
@@ -58,7 +59,7 @@ export function WardStage() {
 
   if (!wardId || !active) return null
   const shown = view === 'ward'
-  const style = { '--ward-panel-width': `${PANEL_WIDTH_PX}px` } as CSSProperties
+  const style = { '--ward-panel-width': `${layout.panelWidthPx}px` } as CSSProperties
 
   if (!data || !armed) {
     if (!shown) return null

@@ -26,3 +26,16 @@
   font-size: var(--text-xs);
   font-weight: 400;
 }
+
+/* A phone held upright (layout.ts, the sheet layout): the building takes most of the screen's width,
+   so a label breaks into short lines instead of running across it. */
+.app[data-layout='sheet'] .scene-label {
+  max-width: 150px;
+  border-radius: var(--radius-sm);
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.app[data-layout='sheet'] .scene-label-result {
+  max-width: 230px;
+}

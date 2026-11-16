@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, type ComponentRef } from
 import { useThree } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { Spherical, Vector3 } from 'three'
+import type { Insets } from '../../layout'
 import { cameraBridge } from './cameraBridge'
 import type { Vec3 } from './geometry'
 import { useSequenceFrame } from './useSequence'
@@ -17,6 +18,10 @@ const ORBIT_IDLE_S = 5
 const UP = new Vector3(0, 1, 0)
 /** The dev elevation view (debug.ts) looks from far away through a long lens, so it reads nearly flat. */
 const ELEVATION_ZOOM = 3.2
+/** How near and how far the pointer can take the camera (m); the far limit follows the rest view back
+ *  on a phone (layout.ts viewFit). */
+const MIN_DISTANCE_M = 15
+const MAX_DISTANCE_M = 120
 
 export interface FixedPose {
   position: Vec3
@@ -27,13 +32,17 @@ export function Camera({
   lotKey,
   distanceM,
   viewBearingDeg,
-  rightInsetPx,
+  insets,
+  maxDistanceFactor = 1,
   fixed = null,
 }: {
   lotKey: string
   distanceM: number
   viewBearingDeg: number
-  rightInsetPx: number
+  /** What the result panel and the search bar cover (layout.ts). */
+  insets: Insets
+  /** How much further out than usual the pointer may zoom: the rest view's own factor. */
+  maxDistanceFactor?: number
   /** Dev only: hold the camera here (debug.ts). */
   fixed?: FixedPose | null
 }) {
@@ -44,16 +53,25 @@ export function Camera({
   const offset = useMemo(() => new Vector3(), [])
   const user = useRef({ dragging: false, releasedAt: -Infinity })
 
-  // Centre the lot in the part of the canvas the result panel does not cover, as the map's padding does.
+  // Centre the lot in the part of the canvas the result panel and the search bar do not cover, as the
+  // map's padding does: the picture is cut from a larger one whose centre falls there. The larger
+  // picture's field of view is widened by as much as it is taller, so a metre stays as many pixels as
+  // on the map (which keeps its field of view over the canvas's own height).
+  const { top, right, bottom, left } = insets
   useLayoutEffect(() => {
     const cam = camera.current
-    if (!cam) return
-    const fullWidth = size.width + rightInsetPx
-    cam.aspect = fullWidth / size.height
-    if (rightInsetPx > 0) cam.setViewOffset(fullWidth, size.height, rightInsetPx, 0, size.width, size.height)
-    else cam.clearViewOffset()
+    if (!cam || size.width === 0 || size.height === 0) return
+    const shiftX = right - left
+    const shiftY = bottom - top
+    const fullWidth = size.width + Math.abs(shiftX)
+    const fullHeight = size.height + Math.abs(shiftY)
+    cam.aspect = fullWidth / fullHeight
+    cam.fov = (Math.atan(Math.tan((FOV_DEG * Math.PI) / 360) * (fullHeight / size.height)) * 360) / Math.PI
+    if (shiftX !== 0 || shiftY !== 0) {
+      cam.setViewOffset(fullWidth, fullHeight, Math.max(0, shiftX), Math.max(0, shiftY), size.width, size.height)
+    } else cam.clearViewOffset()
     cam.updateProjectionMatrix()
-  }, [size, rightInsetPx])
+  }, [size, top, right, bottom, left])
 
   // A new lot starts at the rest view: on the street side, looking along the view bearing.
   // Spherical azimuth runs from +z toward +x; a camera looking at compass bearing b sits at -b.
@@ -104,7 +122,9 @@ export function Camera({
     }
     if (ctl && !ctl.enabled) ctl.enabled = true
     const idle = !user.current.dragging && frame.clock.elapsedTime - user.current.releasedAt >= ORBIT_IDLE_S
-    if (reduced || t < timeline.orbitStart || !idle) return
+    // Not on a frame drawn while the scene is hidden (one is, as it hides): its time step is the
+    // frame's timestamp in milliseconds, which turned the camera to an arbitrary side of the lot.
+    if (reduced || t < timeline.orbitStart || !idle || frame.frameloop === 'never') return
     offset.copy(cam.position).sub(TARGET).applyAxisAngle(UP, ((2 * Math.PI) / ORBIT_PERIOD_S) * delta)
     cam.position.copy(TARGET).add(offset)
     cam.lookAt(TARGET)
@@ -119,8 +139,8 @@ export function Camera({
         target={[TARGET.x, TARGET.y, TARGET.z]}
         enableDamping
         enablePan={false}
-        minDistance={15}
-        maxDistance={120}
+        minDistance={MIN_DISTANCE_M}
+        maxDistance={MAX_DISTANCE_M * maxDistanceFactor}
         maxPolarAngle={1.35}
         onStart={onStart}
         onEnd={onEnd}

@@ -1,7 +1,7 @@
-import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { disclaimers, labels } from '../../copy'
 import { useApp } from '../../state/store'
-import { Blueprint } from '../Landing/Blueprint'
+import { PanelSheet } from '../Sheet/PanelSheet'
 import { Checklist } from './Checklist'
 import { DesignTabs } from './DesignTabs'
 import { Explanation } from './Explanation'
@@ -36,21 +36,21 @@ export function ResultPanel({ extra }: { extra?: ReactNode }) {
           ? labels.ui.outside_toronto
           : labels.ui.load_error
     return (
-      <Sheet>
+      <PanelSheet>
         <p className="panel-message" role="alert">
           {message}
         </p>
-      </Sheet>
+      </PanelSheet>
     )
   }
 
   if (status !== 'ready' || !check) {
     return (
-      <Sheet busy>
+      <PanelSheet busy>
         <div className="skeleton skeleton-title" />
         <div className="skeleton skeleton-line" />
         <div className="skeleton skeleton-tabs" />
-      </Sheet>
+      </PanelSheet>
     )
   }
 
@@ -103,7 +103,11 @@ export function ResultPanel({ extra }: { extra?: ReactNode }) {
   ]
 
   return (
-    <Sheet
+    <PanelSheet
+      // On a phone the panel is a sheet (Sheet/PanelSheet.tsx): its handle is named by the address, and
+      // a new lot puts it back at rest.
+      handleLabel={check.address.address_full ?? check.lot.ward_name}
+      resetKey={check.lot.lot_id}
       footer={
         <div className="panel-footer">
           {/* The ward map needs WebGL. */}
@@ -125,27 +129,6 @@ export function ResultPanel({ extra }: { extra?: ReactNode }) {
             {s.node}
           </Fragment>
         ))}
-    </Sheet>
-  )
-}
-
-/** The panel on the landing card's drafting sheet (Landing/Blueprint.tsx), whose outer rule is the
- *  panel's edge: the content scrolls inside the ruled area, and `footer` stays under it. */
-function Sheet({ children, footer, busy = false }: { children: ReactNode; footer?: ReactNode; busy?: boolean }) {
-  const body = useRef<HTMLDivElement>(null)
-  // The scrollbar runs down the band beside the ruled area, so app.css takes its width (0 where
-  // scrollbars float over the page) out of the band's padding instead of the content.
-  useLayoutEffect(() => {
-    const el = body.current
-    if (el) el.style.setProperty('--scrollbar', `${el.offsetWidth - el.clientWidth}px`)
-  }, [])
-  return (
-    <aside className="panel" aria-busy={busy || undefined}>
-      <Blueprint logo={false} edge />
-      <div ref={body} className="panel-body">
-        {children}
-      </div>
-      {footer}
-    </aside>
+    </PanelSheet>
   )
 }
