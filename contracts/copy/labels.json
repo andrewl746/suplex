@@ -459,7 +459,7 @@
   },
   "warmup": {
     "_note": "The live site's loading screen (web/src/components/Warmup). The step names are the ones deploy/server/serve.py reports.",
-    "note": "This demo sleeps when nobody is visiting. Waking it up takes about 15 seconds.",
+    "note": "This demo sleeps when nobody is visiting. Waking it up takes about 20 seconds.",
     "progress_aria": "Loading Suplex",
     "retry": "Try again",
     "paused": "Suplex is paused for the rest of the month. This demo runs on a small hosting budget, and this month's has been used up. It will be back on the 1st.",
