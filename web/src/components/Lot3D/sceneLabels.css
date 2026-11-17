@@ -30,10 +30,11 @@
 /* ---------- Phones (layout.ts, compact): the labels are pinned, none floats ---------- */
 
 /* Hung round a building that fills a phone's screen, the result's label and six home labels covered
-   it and each other. So there (SceneLabels.tsx, PinnedLabels) the result's label sits in the top left
-   corner under the search bar, the homes fold into a list that opens from a button in the other
-   corner, and the note about the scenario sits at the bottom, just above the result sheet. Over the
-   scene, under the search bar and the sheet. It comes and goes with the scene, and while the scene
+   it and each other. So there (SceneLabels.tsx, PinnedLabels) they sit along the bottom, just above
+   the result sheet, where the picture is lawn and road: the result's label in the left corner, and
+   the homes folded into a list that opens upward from a button in the right corner. The small note
+   about the scenario sits in the top left corner, under the search bar. Over the scene, under the
+   search bar and the sheet. It comes and goes with the scene, and while the scene
    is away it is out of the page altogether: hidden any other way, the button, which LabelProjector
    left visible, could still be tapped through the plan or the ward map. */
 .scene-pins {
@@ -45,7 +46,7 @@
   left: calc(var(--space-2) + var(--safe-left));
   /* Down with the sheet when it is put away (app.css, --sheet-rest). */
   transition: bottom var(--sheet-time) var(--sheet-ease);
-  /* The homes' button, and the room the note at the bottom takes with the gap over it. */
+  /* The homes' button, and the room the note at the top takes with the gap under it. */
   --homes-button: 40px;
   --pins-note: 34px;
   display: none;
@@ -65,12 +66,14 @@
   bottom: var(--space-2);
 }
 
-/* Over the note at the bottom, so the open list is never cut into by it. */
-.scene-pins-top {
+/* Along the bottom, the label and the button level at their feet. Over the note, so the open list
+   is never cut into by it. */
+.scene-pins-row {
   z-index: 1;
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: var(--space-2);
+  margin-top: auto;
 }
 
 /* In the page's flow here, and free to wrap: LabelProjector only fades these in. */
@@ -88,13 +91,10 @@
 }
 
 .scene-pins .scene-pin-note {
-  position: absolute;
-  top: auto;
-  bottom: 0;
-  left: 0;
+  align-self: flex-start;
 }
 
-/* The homes: a button in the far corner, as tall as a finger needs, and its list under it. */
+/* The homes: a button in the far corner, as tall as a finger needs, and its list over it. */
 .scene-homes {
   flex: none;
   margin-left: auto;
@@ -126,29 +126,29 @@
   display: none;
 }
 
-/* A chevron in the accent that turns over when the list is open. */
+/* A chevron in the accent: up, the way the list opens, and turned over while it is open. */
 .scene-homes summary::after {
   content: '';
   width: 7px;
   height: 7px;
-  margin-bottom: 3px;
+  margin-bottom: -4px;
   border-right: 2px solid var(--suplex-accent);
   border-bottom: 2px solid var(--suplex-accent);
-  transform: rotate(45deg);
+  transform: rotate(-135deg);
   transition: transform 150ms ease-out;
 }
 
 .scene-homes details[open] summary::after {
-  margin-bottom: -4px;
-  transform: rotate(-135deg);
+  margin-bottom: 3px;
+  transform: rotate(45deg);
 }
 
-/* Placed in the whole pinned area, not under the button's own box, so its height can be held to the
-   room between the button and the note at the bottom; a longer list scrolls. */
+/* Placed in the whole pinned area, not over the button's own box, so its height can be held to the
+   room between the button and the note at the top; a longer list scrolls. */
 .scene-homes-list {
   position: absolute;
-  top: calc(var(--homes-button) + var(--space-1));
   right: 0;
+  bottom: calc(var(--homes-button) + var(--space-1));
   box-sizing: border-box;
   width: max-content;
   max-width: 100%;
