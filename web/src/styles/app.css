@@ -22,6 +22,11 @@ body {
   font-size: var(--text-md);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  /* The page itself never zooms, by a pinch or by two quick taps. It is one screen laid out to the
+     pixel: zoomed, nothing sits where it is drawn and taps land on the wrong buttons, which is what
+     a second finger on the result sheet used to do. The map, the scene and the plan zoom
+     themselves, and lists still scroll. A phone's own zoom and text-size settings are untouched. */
+  touch-action: pan-x pan-y;
 }
 
 button {
@@ -1571,8 +1576,7 @@ a.flag-label {
 }
 
 /* Under the finger the sheet follows at once. */
-.app[data-layout='sheet'] .panel[data-dragging],
-.app[data-layout='sheet'] .panel[data-dragging] .panel-body {
+.app[data-layout='sheet'] .panel[data-dragging] {
   transition: none;
 }
 
@@ -1619,25 +1623,55 @@ a.flag-label {
   outline-offset: -3px;
 }
 
-/* The content keeps to the ruled area, with less air round it than on a wide screen. Until the sheet
-   is open it does not scroll: a pull moves the sheet instead. */
+/* The content keeps to the ruled area, with less air round it than on a wide screen. The air above
+   and below it is part of what scrolls, not padding on the box: padding would hold the box open, and
+   put away the box closes to nothing, the content cut off by its edge as the sheet comes down. So
+   nothing about the content changes between the stops but how much of it shows. */
 .app[data-layout='sheet'] .panel-body {
-  padding: var(--space-3) calc(20px + var(--space-3) - var(--scrollbar, 0px)) var(--space-4) var(--space-3);
-  transition: padding var(--sheet-time) var(--sheet-ease);
+  padding: 0 calc(20px + var(--space-3) - var(--scrollbar, 0px)) 0 var(--space-3);
 }
 
+.app[data-layout='sheet'] .panel-body::before,
+.app[data-layout='sheet'] .panel-body::after {
+  content: '';
+  display: block;
+}
+
+.app[data-layout='sheet'] .panel-body::before {
+  height: var(--space-3);
+}
+
+.app[data-layout='sheet'] .panel-body::after {
+  height: var(--space-4);
+}
+
+/* Until the sheet is open its content does not scroll: a pull moves the sheet instead. */
 .app[data-layout='sheet'] .panel:not([data-sheet='full']) .panel-body {
   overflow: hidden;
 }
 
-/* Put away, the content takes no room: its padding eases off as the sheet comes down, and once it is
-   down the content is out of reach of the keyboard and screen readers too. */
-.app[data-layout='sheet'] .panel[data-sheet='min'] .panel-body {
-  padding-block: 0;
-  visibility: hidden;
-  transition:
-    padding var(--sheet-time) var(--sheet-ease),
-    visibility 0s var(--sheet-time);
+/* A sheet that is not open belongs to the page's own pulls, not to the browser: no scrolling,
+   zooming or selecting text starts from a touch on it. Any of those, begun by a pull, moves or zooms
+   the page under the finger and leaves the buttons away from where they are drawn. The handle and
+   the footer are the same at every stop. Only the design tabs' sideways slide (a short phone) stays
+   the browser's. */
+.app[data-layout='sheet'] .panel:not([data-sheet='full']),
+.app[data-layout='sheet'] .panel:not([data-sheet='full']) .panel-body,
+.app[data-layout='sheet'] .sheet-handle,
+.app[data-layout='sheet'] .panel-footer {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.app[data-layout='sheet'] .panel:not([data-sheet='full']) .design-tabs {
+  touch-action: pan-x;
+}
+
+/* Open, the content scrolls up and down and nothing else. */
+.app[data-layout='sheet'] .panel[data-sheet='full'] .panel-body {
+  touch-action: pan-y;
 }
 
 .app[data-layout='sheet'] .panel-header {

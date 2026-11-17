@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, type CSSProperties } from 'react'
 import { BaseMap } from './components/BaseMap/BaseMap'
 import { DataBadges } from './components/DataBadges'
 import { GraphicsBoundary } from './components/GraphicsBoundary'
@@ -23,6 +23,7 @@ export default function App() {
   const graphics = useApp((s) => s.graphics)
   const graphicsFailed = useApp((s) => s.graphicsFailed)
   const layout = useLayout()
+  usePageHome()
   const inLot = view === 'lot'
   // The street is built as the check comes back (before the flight starts) and shown from the
   // handoff, over the flight's last stretch.
@@ -67,6 +68,27 @@ export default function App() {
       <MultiplexSearchEntry showButton={view === 'landing'} />
     </main>
   )
+}
+
+/**
+ * The page itself never scrolls (app.css), but a phone can still shift it: to bring a text box above
+ * its keyboard, or when the browser takes a drag for its own. Left shifted, everything is drawn a
+ * little away from where a tap lands. So whenever the page finds itself moved and nobody is typing,
+ * it goes back.
+ */
+function usePageHome() {
+  useEffect(() => {
+    const home = () => {
+      if (document.activeElement instanceof HTMLInputElement) return
+      if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0)
+    }
+    window.addEventListener('scroll', home, { passive: true })
+    document.addEventListener('focusout', home)
+    return () => {
+      window.removeEventListener('scroll', home)
+      document.removeEventListener('focusout', home)
+    }
+  }, [])
 }
 
 /** The address check's search bar and result panel (MASTERSPEC 6.2), over the 3D scene. */
