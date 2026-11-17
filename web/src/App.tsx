@@ -51,6 +51,7 @@ export default function App() {
             designId={designId}
             visible={(inLot || handoff) && sceneCheck !== null}
             insets={layout.insets}
+            pinLabels={layout.compact}
           />
         </GraphicsBoundary>
       )}

@@ -1533,10 +1533,18 @@ a.flag-label {
   white-space: nowrap;
 }
 
+/* How the sheet moves between its stops; whatever sits on it (the plan's and the ward map's controls,
+   the scene's labels) moves the same way, so they travel together. */
+.app[data-layout='sheet'] {
+  --sheet-time: 320ms;
+  --sheet-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* The result panel and the ward panel as a sheet (Sheet/PanelSheet.tsx): along the bottom, resting at
-   the layout's peek height and opening to just under the search bar. Solid, not see-through: the
-   blur over the 3D scene costs a phone more than it gives. The drafting frame keeps its top and
-   sides; its bottom rule runs off the screen, and the footer sits on the screen's edge. */
+   the layout's peek height, opening to just under the search bar, and put away down to its handle
+   and footer. Solid, not see-through: the blur over the 3D scene costs a phone more than it gives.
+   The drafting frame keeps its top and sides; its bottom rule runs off the screen, and the footer
+   sits on the screen's edge. */
 .app[data-layout='sheet'] .panel {
   top: auto;
   right: 0;
@@ -1550,15 +1558,21 @@ a.flag-label {
   background: var(--suplex-surface);
   backdrop-filter: none;
   box-shadow: 0 -8px 24px rgba(28, 31, 38, 0.14);
-  transition: height 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: height var(--sheet-time) var(--sheet-ease);
 }
 
 .app[data-layout='sheet'] .panel[data-sheet='full'] {
   height: calc(100% - var(--sheet-top) - var(--safe-top));
 }
 
+/* Put away: the frame's top band with the handle, and the footer (PanelSheet.tsx measures it). */
+.app[data-layout='sheet'] .panel[data-sheet='min'] {
+  height: var(--sheet-min, 84px);
+}
+
 /* Under the finger the sheet follows at once. */
-.app[data-layout='sheet'] .panel[data-dragging] {
+.app[data-layout='sheet'] .panel[data-dragging],
+.app[data-layout='sheet'] .panel[data-dragging] .panel-body {
   transition: none;
 }
 
@@ -1605,14 +1619,25 @@ a.flag-label {
   outline-offset: -3px;
 }
 
-/* The content keeps to the ruled area, with less air round it than on a wide screen. At rest it does
-   not scroll: a pull opens the sheet instead. */
+/* The content keeps to the ruled area, with less air round it than on a wide screen. Until the sheet
+   is open it does not scroll: a pull moves the sheet instead. */
 .app[data-layout='sheet'] .panel-body {
   padding: var(--space-3) calc(20px + var(--space-3) - var(--scrollbar, 0px)) var(--space-4) var(--space-3);
+  transition: padding var(--sheet-time) var(--sheet-ease);
 }
 
-.app[data-layout='sheet'] .panel[data-sheet='peek'] .panel-body {
+.app[data-layout='sheet'] .panel:not([data-sheet='full']) .panel-body {
   overflow: hidden;
+}
+
+/* Put away, the content takes no room: its padding eases off as the sheet comes down, and once it is
+   down the content is out of reach of the keyboard and screen readers too. */
+.app[data-layout='sheet'] .panel[data-sheet='min'] .panel-body {
+  padding-block: 0;
+  visibility: hidden;
+  transition:
+    padding var(--sheet-time) var(--sheet-ease),
+    visibility 0s var(--sheet-time);
 }
 
 .app[data-layout='sheet'] .panel-header {
@@ -1740,7 +1765,8 @@ a.flag-label {
 /* The data notes keep clear of the search bar and the sheet. */
 .app[data-layout='sheet'] .data-banner {
   top: auto;
-  bottom: calc(var(--sheet-peek) + var(--space-2));
+  bottom: calc(var(--sheet-rest, var(--sheet-peek)) + var(--space-2));
+  transition: bottom var(--sheet-time) var(--sheet-ease);
   box-sizing: border-box;
   width: max-content;
   max-width: calc(100% - 2 * var(--space-2));
@@ -1755,10 +1781,15 @@ a.flag-label {
 }
 
 .app[data-layout='sheet'][data-view='ward'] .data-badge {
-  bottom: calc(var(--sheet-peek) + var(--space-2));
+  bottom: calc(var(--sheet-rest, var(--sheet-peek)) + var(--space-2));
+  transition: bottom var(--sheet-time) var(--sheet-ease);
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .app[data-layout='sheet'] {
+    --sheet-time: 0s;
+  }
+
   .app[data-layout='sheet'] .panel {
     transition: none;
   }

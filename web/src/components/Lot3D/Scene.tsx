@@ -32,7 +32,7 @@ import { FACADES } from './models'
 import { OldHouse } from './OldHouse'
 import { Pin } from './Pin'
 import { QualityMonitor } from './QualityMonitor'
-import { SceneLabels } from './SceneLabels'
+import { PinnedLabels, SceneLabels } from './SceneLabels'
 import { SettleWatch, ShadowFreeze } from './Settle'
 import { Sky, type SkyLook } from './Sky'
 import { Sequence } from './Sequence'
@@ -100,12 +100,15 @@ export function Scene({
   designId,
   visible,
   insets,
+  pinLabels = false,
 }: {
   check: CheckResponse | null
   designId: DesignId | null
   visible: boolean
   /** What the result panel and the search bar cover: the lot is centred in the rest. */
   insets: Insets
+  /** A phone: the labels are pinned round the edges instead of floating over the building. */
+  pinLabels?: boolean
 }) {
   const reduced = useReducedMotion()
   // Dev only: ?stress=400 swaps in a dense synthetic street (debug.ts).
@@ -213,7 +216,7 @@ export function Scene({
     }
   }, [placement, spec])
 
-  return (
+  const scene = (
     <div
       className={visible ? 'scene scene-visible' : 'scene'}
       // The fade lasts the handoff: fully drawn as the map lands. Hiding stays instant.
@@ -303,12 +306,19 @@ export function Scene({
               resolution={CONTACT.resolution}
             />
           )}
-          <LabelProjector labels={labels} elements={labelElements} insets={insets} />
+          <LabelProjector labels={labels} elements={labelElements} insets={insets} pinned={pinLabels} />
         </Sequence>
         {drawn && !OFF.has('ao') && <Effects ao={rich} rightInsetPx={insets.right} />}
         {SHOW_STATS && <Stats />}
       </Canvas>
-      {!ELEVATION_VIEW && <SceneLabels labels={labels} elements={labelElements} />}
+      {!ELEVATION_VIEW && !pinLabels && <SceneLabels labels={labels} elements={labelElements} />}
     </div>
+  )
+  // Pinned labels are a button and a list, so they sit beside the scene, which screen readers skip.
+  return (
+    <>
+      {scene}
+      {!ELEVATION_VIEW && pinLabels && <PinnedLabels labels={labels} elements={labelElements} visible={visible} />}
+    </>
   )
 }

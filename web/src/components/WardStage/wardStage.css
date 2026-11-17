@@ -477,7 +477,8 @@
 }
 
 .app[data-layout='sheet'] .ward-stage .ward-legend {
-  bottom: calc(var(--sheet-peek) + var(--space-2));
+  bottom: calc(var(--sheet-rest, var(--sheet-peek)) + var(--space-2));
+  transition: bottom var(--sheet-time) var(--sheet-ease);
   left: calc(var(--space-2) + var(--safe-left));
   max-width: calc(100% - 2 * var(--space-2));
 }

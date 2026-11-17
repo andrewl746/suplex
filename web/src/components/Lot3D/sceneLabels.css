@@ -27,15 +27,159 @@
   font-weight: 400;
 }
 
-/* A phone held upright (layout.ts, the sheet layout): the building takes most of the screen's width,
-   so a label breaks into short lines instead of running across it. */
-.app[data-layout='sheet'] .scene-label {
-  max-width: 150px;
-  border-radius: var(--radius-sm);
-  line-height: 1.25;
+/* ---------- Phones (layout.ts, compact): the labels are pinned, none floats ---------- */
+
+/* Hung round a building that fills a phone's screen, the result's label and six home labels covered
+   it and each other. So there (SceneLabels.tsx, PinnedLabels) the result's label sits in the top left
+   corner under the search bar, the homes fold into a list that opens from a button in the other
+   corner, and the note about the scenario sits at the bottom, just above the result sheet. Over the
+   scene, under the search bar and the sheet. It comes and goes with the scene, and while the scene
+   is away it is out of the page altogether: hidden any other way, the button, which LabelProjector
+   left visible, could still be tapped through the plan or the ward map. */
+.scene-pins {
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--sheet-top) + var(--safe-top) + var(--space-1));
+  right: calc(var(--space-2) + var(--safe-right));
+  bottom: calc(var(--sheet-rest, var(--sheet-peek)) + var(--space-2));
+  left: calc(var(--space-2) + var(--safe-left));
+  /* Down with the sheet when it is put away (app.css, --sheet-rest). */
+  transition: bottom var(--sheet-time) var(--sheet-ease);
+  /* The homes' button, and the room the note at the bottom takes with the gap over it. */
+  --homes-button: 40px;
+  --pins-note: 34px;
+  display: none;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.scene-pins-visible {
+  display: flex;
+  animation: fade-in 400ms ease-out both;
+}
+
+/* A phone on its side: beside the panel, under its shorter search bar. */
+.app[data-layout='side'] .scene-pins {
+  top: 68px;
+  right: calc(var(--panel-width) + var(--space-2));
+  bottom: var(--space-2);
+}
+
+/* Over the note at the bottom, so the open list is never cut into by it. */
+.scene-pins-top {
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* In the page's flow here, and free to wrap: LabelProjector only fades these in. */
+.scene-pins .scene-label {
+  position: static;
+  will-change: opacity;
+  line-height: 1.3;
   white-space: normal;
 }
 
-.app[data-layout='sheet'] .scene-label-result {
-  max-width: 230px;
+/* The result's label takes the room the homes' button leaves, and wraps inside it. */
+.scene-pins .scene-label-result {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.scene-pins .scene-pin-note {
+  position: absolute;
+  top: auto;
+  bottom: 0;
+  left: 0;
+}
+
+/* The homes: a button in the far corner, as tall as a finger needs, and its list under it. */
+.scene-homes {
+  flex: none;
+  margin-left: auto;
+  will-change: opacity;
+  pointer-events: auto;
+}
+
+.scene-homes summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  height: var(--homes-button);
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border: 1px solid var(--blueprint-edge);
+  border-radius: 999px;
+  background: var(--suplex-surface);
+  box-shadow: var(--shadow);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.scene-homes summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A chevron in the accent that turns over when the list is open. */
+.scene-homes summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  margin-bottom: 3px;
+  border-right: 2px solid var(--suplex-accent);
+  border-bottom: 2px solid var(--suplex-accent);
+  transform: rotate(45deg);
+  transition: transform 150ms ease-out;
+}
+
+.scene-homes details[open] summary::after {
+  margin-bottom: -4px;
+  transform: rotate(-135deg);
+}
+
+/* Placed in the whole pinned area, not under the button's own box, so its height can be held to the
+   room between the button and the note at the bottom; a longer list scrolls. */
+.scene-homes-list {
+  position: absolute;
+  top: calc(var(--homes-button) + var(--space-1));
+  right: 0;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 100%;
+  max-height: calc(100% - var(--homes-button) - var(--space-1) - var(--pins-note));
+  margin: 0;
+  padding: var(--space-1) 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--blueprint-edge);
+  border-radius: var(--radius-sm);
+  background: var(--suplex-surface);
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  line-height: 1.3;
+  list-style: none;
+}
+
+.scene-homes-list li {
+  padding: 5px var(--space-3);
+}
+
+.scene-homes-list li + li {
+  border-top: 1px solid var(--blueprint-major);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-pins-visible {
+    animation: none;
+  }
+
+  .scene-homes summary::after {
+    transition: none;
+  }
 }
