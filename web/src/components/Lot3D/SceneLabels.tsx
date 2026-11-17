@@ -50,10 +50,12 @@ export function SceneLabels({ labels, elements }: { labels: SceneLabel[]; elemen
 
 /**
  * The same labels on a phone (layout.ts, compact), where none floats: the building fills the screen
- * there, and its six home labels and the result's label covered it and each other. The result's
- * label is pinned to the top left corner under the search bar. The homes fold into a list that opens
- * from a button in the other corner, named by how many there are. The note about the scenario sits
- * at the bottom, just above the result sheet. LabelProjector still brings each in on its step of the
+ * there, and its six home labels and the result's label covered it and each other. They sit along
+ * the bottom of the picture, just above the result sheet: seen from the street side the building
+ * stands in the upper part, and the strip above the sheet is lawn, sidewalk and road. The result's
+ * label is in the left corner there. The homes fold into a list that opens upward from a button in
+ * the right corner, named by how many there are. The small note about the scenario sits in the top
+ * left corner, under the search bar. LabelProjector still brings each in on its step of the
  * sequence: the button with the first home's label.
  *
  * Drawn beside the scene, not inside it: the scene is hidden from screen readers, and a button must
@@ -90,7 +92,12 @@ export function PinnedLabels({ labels, elements, visible }: { labels: SceneLabel
 
   return (
     <div className={visible ? 'scene-pins scene-pins-visible' : 'scene-pins'}>
-      <div className="scene-pins-top">
+      {note && (
+        <div ref={place(note.index)} className={`${labelClass(note.label)} scene-pin-note`} style={hidden}>
+          <LabelText label={note.label} />
+        </div>
+      )}
+      <div className="scene-pins-row">
         {result && (
           <div ref={place(result.index)} className={labelClass(result.label)} style={hidden}>
             <LabelText label={result.label} />
@@ -109,11 +116,6 @@ export function PinnedLabels({ labels, elements, visible }: { labels: SceneLabel
           </div>
         )}
       </div>
-      {note && (
-        <div ref={place(note.index)} className={`${labelClass(note.label)} scene-pin-note`} style={hidden}>
-          <LabelText label={note.label} />
-        </div>
-      )}
     </div>
   )
 }
