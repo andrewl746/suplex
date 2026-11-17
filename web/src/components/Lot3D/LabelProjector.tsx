@@ -42,17 +42,20 @@ const ALIGN: Record<SceneLabel['align'], string> = {
 
 /**
  * Moves each label element to its point on screen and fades it in on its step of the timeline. The
- * home labels also wait for the camera to hold still.
+ * home labels also wait for the camera to hold still. On a phone the labels are `pinned`: the page
+ * places them (SceneLabels.tsx, PinnedLabels), and this only brings each in on its step.
  */
 export function LabelProjector({
   labels,
   elements,
   insets,
+  pinned = false,
 }: {
   labels: SceneLabel[]
   elements: RefObject<(HTMLDivElement | null)[]>
   /** What covers the canvas's top and bottom (layout.ts): labels keep out from under it. */
   insets: Insets
+  pinned?: boolean
 }) {
   const points = useMemo(() => labels.map((l) => new Vector3(...l.position)), [labels])
   const scratch = useMemo(() => new Vector3(), [])
@@ -88,6 +91,12 @@ export function LabelProjector({
       const span =
         appear.step === 'oldHouse' ? timeline.oldHouse : appear.step === 'fail' ? timeline.fail : timeline.labels[appear.index]
       const p = span ? ease.outCubic(progress(t, span)) : 0
+      if (pinned) {
+        // Out of reach until it shows: the homes' button is not there to be tapped before its step.
+        el.style.opacity = String(p)
+        el.style.visibility = p > 0 ? 'visible' : 'hidden'
+        return
+      }
       const ndc = scratch.copy(points[i]).project(frame.camera)
       // Behind the camera, or not yet due.
       if (ndc.z > 1 || p <= 0) {

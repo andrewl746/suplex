@@ -316,10 +316,11 @@
 
 /* ---------- A phone held upright: the sheet layout (layout.ts) ---------- */
 
-/* The drawing fills the screen above the resting sheet, and its controls keep clear of the search bar
-   above and the sheet below. */
+/* The drawing fills the screen above the sheet, and its controls keep clear of the search bar above and
+   the sheet below. When the sheet is put away (app.css, --sheet-rest) they follow it down. */
 .app[data-layout='sheet'] .plan-stage {
-  inset: 0 0 var(--sheet-peek) 0;
+  inset: 0 0 var(--sheet-rest, var(--sheet-peek)) 0;
+  transition: bottom var(--sheet-time) var(--sheet-ease);
 }
 
 .app[data-layout='sheet'] .plan-north {
@@ -347,7 +348,8 @@
 }
 
 .app[data-layout='sheet'] .plan-zoom {
-  bottom: calc(var(--sheet-peek) + var(--space-2));
+  bottom: calc(var(--sheet-rest, var(--sheet-peek)) + var(--space-2));
+  transition: bottom var(--sheet-time) var(--sheet-ease);
   left: calc(var(--space-2) + var(--safe-left));
 }
 
